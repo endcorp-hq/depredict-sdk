@@ -1,5 +1,5 @@
-import DashboardFeature from '@/features/dashboard/dashboard-feature'
+import PredictionMarketLanding from '@/components/landing/landing-ui'
 
 export default function Home() {
-  return <DashboardFeature />
+  return <PredictionMarketLanding />
 }
