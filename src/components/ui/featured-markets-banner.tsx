@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { TrendingUp, Flame, Clock } from 'lucide-react'
+import { TrendingUp, Flame } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function FeaturedMarketsBanner() {

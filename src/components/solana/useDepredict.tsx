@@ -123,7 +123,6 @@ type PositionPageInfo = {
 const ShortxContext = createContext<ShortxContextType | undefined>(undefined)
 
 export const ShortxProvider = ({ children }: { children: ReactNode }) => {
-  const { wallets } = useSolana() //FIX THIS TO GET THE CORRECT USER PUBKEY
   const connection = useMemo(
     () => new Connection('https://api.devnet.solana.com'),
     [] // Empty dependency array means it only creates once
@@ -134,7 +133,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
   const [loadingMarkets, setLoadingMarkets] = useState(true)
   const [depredictError, setDepredictError] = useState<DepredictError | null>(null)
   const [refreshCount, setRefreshCount] = useState(0)
-  const [marketCreatorPubkey, setMarketCreatorPubkey] = useState<PublicKey | null>(null)
+//   const [marketCreatorPubkey, setMarketCreatorPubkey] = useState<PublicKey | null>(null)
   const [recentTrades, setRecentTrades] = useState<Position[]>([])
   const [marketEvents, setMarketEvents] = useState<
     {

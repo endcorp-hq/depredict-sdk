@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { useShortx } from '@/components/solana/useDepredict'
 import { MarketCard } from '@/components/ui/market-card'
-import { Search, Filter, Loader2 } from 'lucide-react'
+import { Search, Loader2 } from 'lucide-react'
 import { MarketStates } from '@endcorp/depredict'
 import { cn } from '@/lib/utils'
 import { FeaturedMarketsBanner } from './featured-markets-banner'

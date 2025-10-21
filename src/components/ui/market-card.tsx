@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react'
-import { Market, MarketStates, MarketType, WinningDirection } from '@endcorp/depredict'
-import { Clock, TrendingUp, Users, Calendar, Radio, PlayCircle, Gavel, CheckCircle, XCircle, MinusCircle } from 'lucide-react'
+import { Market, MarketType, WinningDirection } from '@endcorp/depredict'
+import { Clock, Radio, PlayCircle, Gavel, CheckCircle, XCircle, MinusCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface MarketCardProps {

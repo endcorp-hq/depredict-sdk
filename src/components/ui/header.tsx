@@ -1,6 +1,7 @@
 'use client'
 
 import { WalletDropdown } from '@/components/wallet-dropdown'
+import Link from 'next/link'
 
 export function Header() {
   return (
@@ -8,14 +9,14 @@ export function Header() {
       <div className="flex h-16 items-center justify-between px-4">
         {/* Logo on the left */}
         <div className="flex items-center gap-2">
-          <a href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
               <span className="text-white font-bold text-lg">D</span>
             </div>
             <span className="hidden font-bold sm:inline-block">
               Depredict
             </span>
-          </a>
+          </Link>
         </div>
 
         {/* Connect wallet button on the right */}
