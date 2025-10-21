@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react'
 import DepredictClient from '@endcorp/depredict'
 import {
   AddressLookupTableAccount,
@@ -124,13 +124,15 @@ const ShortxContext = createContext<ShortxContextType | undefined>(undefined)
 
 export const ShortxProvider = ({ children }: { children: ReactNode }) => {
   const { wallets } = useSolana() //FIX THIS TO GET THE CORRECT USER PUBKEY
-  const connection = new Connection('devnet') //FIX THIS TO GET THE RPC
-  const user = wallets[0]
+  const connection = useMemo(
+    () => new Connection('https://api.devnet.solana.com'),
+    [] // Empty dependency array means it only creates once
+  )
   const [client, setClient] = useState<DepredictClient | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [markets, setMarkets] = useState<Market[]>([])
   const [loadingMarkets, setLoadingMarkets] = useState(true)
-  const [error, setError] = useState<DepredictError | null>(null)
+  const [depredictError, setDepredictError] = useState<DepredictError | null>(null)
   const [refreshCount, setRefreshCount] = useState(0)
   const [marketCreatorPubkey, setMarketCreatorPubkey] = useState<PublicKey | null>(null)
   const [recentTrades, setRecentTrades] = useState<Position[]>([])
@@ -160,24 +162,22 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
 
   //init SDK on load
   useEffect(() => {
-    const initializeSDK = async () => {
+    if (connection && !client && !depredictError) {
       try {
-        if (!process.env.CREATOR_PUBLIC_ADMIN_KEY) {
-          throw createShortxError(DepredictErrorType.INITIALIZATION, 'Missing EXPO_PUBLIC_ADMIN_KEY')
-        }
         const shortxClient = new DepredictClient(connection)
-
         setClient(shortxClient)
         setIsInitialized(true)
-        console.log(`SDK initialized for DEVNET`) //GET RPC AND CONFIG FOR DEVNET/MAINNET
+        console.log(`SDK initialized for DEVNET`)
       } catch (err) {
-        setError(createShortxError(DepredictErrorType.INITIALIZATION, 'Failed to initialize SDK', err))
         setIsInitialized(false)
+        if(depredictError) return
+        setDepredictError(createShortxError(DepredictErrorType.INITIALIZATION, 'Failed to initialize SDK', err))
+     
       }
     }
-    if (connection && user) initializeSDK()
-  }, [connection, user])
+  }, [connection, client, depredictError])
 
+  console.log('depredictError', depredictError)
 
   //fetch markets on load
   useEffect(() => {
@@ -387,10 +387,11 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchAllMarkets = async () => {
     setLoadingMarkets(true)
-    setError(null)
     try {
-      const authority = new PublicKey(process.env.MARKET_CREATOR_PUBKEY!)
+      const authority = new PublicKey(process.env.NEXT_PUBLIC_CREATOR_PUBLIC_ADMIN_KEY!)
+      console.log('authority', authority)
       if (!authority) {
+        console.log('error is thrown!')
         throw createShortxError(DepredictErrorType.INITIALIZATION, 'Missing creator pubkey during market fetching')
       }
       if (client) {
@@ -399,7 +400,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: unknown) {
       console.log('error', err)
-      setError(createShortxError(DepredictErrorType.MARKET_FETCH, 'Unknown error', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_FETCH, 'Unknown error', err))
       setMarkets([])
     } finally {
       setLoadingMarkets(false)
@@ -412,7 +413,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const result = await client.trade.createMarket(args)
       return result
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.MARKET_CREATION, 'Failed to create market', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_CREATION, 'Failed to create market', err))
       return null
     }
   }
@@ -423,7 +424,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.trade.updateMarket(marketId, payer, marketEnd, marketState)
       return ixs || null
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.MARKET_UPDATE, 'Failed to update market', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_UPDATE, 'Failed to update market', err))
       return null
     }
   }
@@ -434,7 +435,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.trade.closeMarket(marketId, payer)
       return ixs
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.MARKET_CLOSURE, 'Failed to close market', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_CLOSURE, 'Failed to close market', err))
       return null
     }
   }
@@ -445,7 +446,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.trade.resolveMarket(args)
       return ixs
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.MARKET_RESOLUTION, 'Failed to resolve market', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_RESOLUTION, 'Failed to resolve market', err))
       return null
     }
   }
@@ -456,7 +457,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const accounts = await client.position.getAllPositionPagesForMarket(marketId)
       return accounts
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.POSITION_FETCH, 'Failed to fetch positions', err))
+      setDepredictError(createShortxError(DepredictErrorType.POSITION_FETCH, 'Failed to fetch positions', err))
       return null
     }
   }
@@ -469,7 +470,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       return ixs
     } catch (err) {
       console.log('openPosition error', err)
-      setError(createShortxError(DepredictErrorType.POSITION_OPENING, 'Failed to open position', err))
+      setDepredictError(createShortxError(DepredictErrorType.POSITION_OPENING, 'Failed to open position', err))
       throw err
     }
   }
@@ -485,7 +486,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       return tx
     } catch (err) {
       console.log('payoutPosition error', err)
-      setError(createShortxError(DepredictErrorType.PAYOUT, 'Failed to payout position', err))
+      setDepredictError(createShortxError(DepredictErrorType.PAYOUT, 'Failed to payout position', err))
       return null
     }
   }
@@ -502,7 +503,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       })
       return ixs
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to create market creator', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to create market creator', err))
       return null
     }
   }
@@ -513,7 +514,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.marketCreator.verifyMarketCreator(args)
       return ixs
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to verify market creator', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to verify market creator', err))
       return null
     }
   }
@@ -524,7 +525,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.marketCreator.updateMarketCreatorName(args)
       return ixs
     } catch (err) {
-      setError(
+      setDepredictError(
         createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to update market creator name', err),
       )
       return null
@@ -541,7 +542,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.marketCreator.updateMarketCreatorFeeVault(args)
       return ixs
     } catch (err) {
-      setError(
+      setDepredictError(
         createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to update market creator fee vault', err),
       )
       return null
@@ -554,7 +555,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.marketCreator.updateMarketCreatorFee(args)
       return ixs
     } catch (err) {
-      setError(
+      setDepredictError(
         createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to update market creator fee', err),
       )
       return null
@@ -567,7 +568,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       const ixs = await client.marketCreator.updateMerkleTree(args)
       return ixs
     } catch (err) {
-      setError(createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to update merkle tree', err))
+      setDepredictError(createShortxError(DepredictErrorType.MARKET_CREATOR_CREATION, 'Failed to update merkle tree', err))
       return null
     }
   }
@@ -577,7 +578,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
         client,
         markets,
         loadingMarkets,
-        error,
+        error:depredictError,
         isInitialized,
         recentTrades,
         marketEvents,
