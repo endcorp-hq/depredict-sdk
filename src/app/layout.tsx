@@ -3,6 +3,7 @@ import './globals.css'
 import { AppProviders } from '@/components/app-providers'
 import { AppLayout } from '@/components/app-layout'
 import React from 'react'
+import { Header } from '@/components/ui/header'
 
 export const metadata: Metadata = {
   title: 'depredict scaffold',
@@ -13,7 +14,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`antialiased`}>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          {' '}
+          <Header />
+          {children}
+        </AppProviders>
       </body>
     </html>
   )

@@ -17,7 +17,7 @@ export default function PredictionMarketLanding() {
       </div>
 
       {/* Header */}
-      <Header />
+      {/* //<Header /> */}
 
       {/* Live Markets Section */}
       <MarketsSection />
