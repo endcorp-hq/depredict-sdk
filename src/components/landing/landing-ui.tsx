@@ -2,14 +2,18 @@
 
 import React from 'react'
 import { TrendingUp } from 'lucide-react'
-import { Header } from '@/components/ui/header'
 import { MarketsSection } from '@/components/ui/market-section'
 
 export default function PredictionMarketLanding() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
-      {/* Header */}
-      <Header />
+      {/* Animated background stars */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+        <div className="absolute top-40 right-32 w-1 h-1 bg-blue-400 rounded-full animate-pulse delay-75"></div>
+        <div className="absolute bottom-32 left-1/4 w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse delay-150"></div>
+        <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-pink-400 rounded-full animate-pulse delay-300"></div>
+      </div>
 
       {/* Live Markets Section */}
       <MarketsSection />
