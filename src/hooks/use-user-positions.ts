@@ -5,16 +5,28 @@ import { useSolana } from '@/components/solana/use-solana'
 
 interface Asset {
   id: string
+  burnt: boolean
+  interface: string
   content: {
+    $schema: string
+    json_uri: string
     metadata: {
       name: string
-      symbol: string
+      symbol?: string
+      [key: string]: any
     }
+  }
+  ownership: {
+    frozen: boolean
+    non_transferable: boolean
+    delegated: boolean
+    delegate?: string | null
   }
   grouping?: Array<{
     group_key: string
     group_value: string
   }>
+  [key: string]: any
 }
 
 interface DasApiResponse {
@@ -44,7 +56,13 @@ export function useUserPositions() {
   // Format: "DEPREDICT-{market_id}-{position_id}"
   const parseAssetName = (asset: Asset): ParsedAsset | null => {
     try {
-      const name = asset.content.metadata.name
+      const name = asset.content?.metadata?.name
+      
+      if (!name) {
+        console.warn(`Asset ${asset.id} has no name`)
+        return null
+      }
+
       const match = name.match(/^DEPREDICT-(\d+)-(\d+)$/)
       
       if (!match) {
@@ -75,7 +93,7 @@ export function useUserPositions() {
       }
 
       // Get RPC endpoint from cluster
-      const rpcEndpoint =  "https://devnet.helius-rpc.com/?api-key=c7c71360-ee3b-437a-bc8d-0c2931d673df"
+      const rpcEndpoint = "https://devnet.helius-rpc.com/?api-key=c7c71360-ee3b-437a-bc8d-0c2931d673df"
 
       const dasResponse = await fetch(rpcEndpoint, {
         method: 'POST',
@@ -102,15 +120,28 @@ export function useUserPositions() {
       }
 
       const data: DasApiResponse = await dasResponse.json()
-      console.log('data', data)
-      setAssets(data.result.items)
+      
+      // Filter out burnt assets
+      const validAssets = data.result.items.filter(asset => {
+        if (asset.burnt) {
+          console.log(`Filtering out burnt asset: ${asset.id}`)
+          return false
+        }
+        return true
+      })
+      
+      setAssets(validAssets)
       
       // Parse asset names to extract market IDs and position IDs
-      const parsed = data.result.items
+      const parsed = validAssets
         .map(parseAssetName)
         .filter((asset): asset is ParsedAsset => asset !== null)
       
       setParsedAssets(parsed)
+      
+      console.log(`Found ${validAssets.length} valid assets (${data.result.items.length - validAssets.length} burnt)`)
+      console.log(`Parsed ${parsed.length} position assets`)
+      
       return parsed
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error fetching assets')

@@ -5,6 +5,12 @@ import { PositionCard } from './position-card'
 import { Filter, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { usePositionDetails } from '@/hooks/use-position-details'
+import { PublicKey } from '@solana/web3.js'
+import { useShortx } from '@/components/solana/useDepredict'
+import { useSolana } from '@/components/solana/use-solana'
+import { useBurnNft } from '@/hooks/use-burn-nft'
+import { toast } from 'sonner'
+import { useClaimAndBurn } from '@/hooks/use-claim-and-burn'
 
 type FilterType = 'all' | 'active' | 'won' | 'lost'
 
@@ -12,7 +18,43 @@ export function PositionsList() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   
   // Use the hook to get real position data
-  const { positions, loading, error } = usePositionDetails()
+  const { positions, loading, error, refetch } = usePositionDetails()
+  const { client } = useShortx()
+  const { account } = useSolana()
+  const { burnNft } = useBurnNft()
+  const { claimAndBurn, isProcessing } = useClaimAndBurn()
+
+  // Replace handleClaim to use atomic claim+burn
+  const handleClaim = async (assetId: string, marketId: number) => {
+    try {
+      await claimAndBurn(assetId, marketId)
+      
+      // Refresh positions after successful claim and burn
+      setTimeout(() => refetch(), 2000)
+    } catch (err) {
+      console.error('Claim error:', err)
+      // Error is already handled in the hook with toast
+    }
+  }
+
+  // handleBurn stays the same for lost positions
+  const handleBurn = async (assetId: string) => {
+    if (!account) {
+      toast.error('Wallet not connected')
+      return
+    }
+
+    try {
+      // Use the burn hook
+      await burnNft(assetId, process.env.NEXT_PUBLIC_CORE_COLLECTION_ID)
+      
+      // Refresh positions after burning
+      setTimeout(() => refetch(), 2000)
+    } catch (err) {
+      // Error is already handled in the hook with toast
+      console.error('Burn error:', err)
+    }
+  }
 
   // Filter positions based on active filter
   const filteredPositions = positions.filter(pos => 
@@ -95,13 +137,17 @@ export function PositionsList() {
               key={position.id} 
               position={{
                 id: position.id,
+                assetId: position.assetId,
+                marketId: position.marketId,
                 question: position.question || `Market #${position.marketId}`,
                 direction: position.direction,
                 amount: position.amount,
                 probability: position.probability || 50,
                 status: position.status,
                 timestamp: new Date(position.timestamp).toLocaleDateString(),
-              }} 
+              }}
+              onClaim={handleClaim}
+              onBurn={handleBurn}
             />
           ))
         )}

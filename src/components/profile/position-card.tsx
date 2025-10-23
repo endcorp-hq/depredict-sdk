@@ -1,11 +1,13 @@
 'use client'
 
-import React from 'react'
-import { Clock, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
+import React, { useState } from 'react'
+import { Clock, TrendingUp, CheckCircle, XCircle, Flame, Trophy, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Position {
   id: string
+  assetId?: string
+  marketId?: number
   question: string
   direction: 'yes' | 'no'
   amount: number
@@ -16,9 +18,13 @@ interface Position {
 
 interface PositionCardProps {
   position: Position
+  onClaim?: (assetId: string, marketId: number) => Promise<void>
+  onBurn?: (assetId: string) => Promise<void>
 }
 
-export function PositionCard({ position }: PositionCardProps) {
+export function PositionCard({ position, onClaim, onBurn }: PositionCardProps) {
+  const [isProcessing, setIsProcessing] = useState(false)
+
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'won':
@@ -59,8 +65,34 @@ export function PositionCard({ position }: PositionCardProps) {
   const statusConfig = getStatusConfig(position.status)
   const StatusIcon = statusConfig.icon
 
+  const handleClaim = async () => {
+    if (!position.assetId || !position.marketId || !onClaim) return
+    
+    setIsProcessing(true)
+    try {
+      await onClaim(position.assetId, position.marketId)
+    } catch (error) {
+      console.error('Failed to claim:', error)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleBurn = async () => {
+    if (!position.assetId || !onBurn) return
+    
+    setIsProcessing(true)
+    try {
+      await onBurn(position.assetId)
+    } catch (error) {
+      console.error('Failed to burn:', error)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   return (
-    <div className="group p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 hover:scale-[1.01]">
+    <div className="group p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
       <div className="space-y-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
@@ -96,7 +128,7 @@ export function PositionCard({ position }: PositionCardProps) {
           <div className="flex items-center gap-4">
             <div>
               <span className="text-slate-400">Amount: </span>
-              <span className="text-white font-semibold">${position.amount}</span>
+              <span className="text-white font-semibold">${position.amount.toFixed(2)}</span>
             </div>
             <div>
               <span className="text-slate-400">Odds: </span>
@@ -105,6 +137,47 @@ export function PositionCard({ position }: PositionCardProps) {
           </div>
           <span className="text-slate-500">{position.timestamp}</span>
         </div>
+
+        {/* Action Buttons */}
+        {position.status === 'won' && onClaim && (
+          <button
+            onClick={handleClaim}
+            disabled={isProcessing}
+            className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-emerald-500/25"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Trophy className="w-4 h-4" />
+                Claim Winnings
+              </>
+            )}
+          </button>
+        )}
+
+        {position.status === 'lost' && onBurn && (
+          <button
+            onClick={handleBurn}
+            disabled={isProcessing}
+            className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 hover:border-red-500/50 text-red-400 hover:text-red-300 font-semibold transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Flame className="w-4 h-4" />
+                Burn NFT
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
