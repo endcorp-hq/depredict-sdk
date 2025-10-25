@@ -19,8 +19,8 @@ export function useClaimAndBurn() {
   const { client } = useShortx()
 
   const claimAndBurn = async (assetId: string, marketId: number, coreCollection?: string) => {
-    if (!wallet.publicKey || !wallet.signTransaction) {
-      throw new Error('Wallet not connected')
+    if (!wallet.publicKey || !wallet.signAllTransactions) {
+      throw new Error('Wallet not connected or does not support signing multiple transactions')
     }
 
     if (!client) {
@@ -34,17 +34,16 @@ export function useClaimAndBurn() {
       const assetPublicKey = new PublicKey(assetId)
       const payerPubkey = wallet.publicKey
 
-      toast.loading('Preparing claim and burn...', { id: 'claim-burn' })
+      toast.loading('Preparing transactions...', { id: 'claim-burn' })
 
       // Step 1: Get payout instructions from SDK
       const payoutResult = await client.trade.payoutPosition({
         marketId,
         payer: payerPubkey,
         assetId: assetPublicKey,
+        rpcEndpoint,
       })
 
-      // Extract instructions from payout result
-      // Extract instructions from payout result
       let payoutInstructions: TransactionInstruction[] = []
       if (payoutResult) {
         if (Array.isArray(payoutResult)) {
@@ -62,7 +61,6 @@ export function useClaimAndBurn() {
 
       // Step 2: Create UMI and get burn instructions
       const umi = createUmi(rpcEndpoint).use(dasApi()).use(walletAdapterIdentity(wallet))
-
       const assetUmiKey = umiPublicKey(assetId)
 
       toast.loading('Fetching asset metadata...', { id: 'claim-burn' })
@@ -79,7 +77,6 @@ export function useClaimAndBurn() {
         const delegate = dasAsset?.ownership?.delegate?.toString() || dasAsset?.ownership?.delegate
         currentDelegateStr = typeof delegate === 'string' && delegate.length > 0 ? delegate : undefined
 
-        // Extract collection
         const groupingArr: any[] = dasAsset?.grouping || dasAsset?.group || dasAsset?.content?.grouping || []
         const coll = groupingArr.find?.((g: any) => (g?.group_key || g?.groupKey) === 'collection')
         const value = coll?.group_value ?? coll?.groupValue
@@ -92,17 +89,13 @@ export function useClaimAndBurn() {
 
       toast.loading('Fetching asset proof...', { id: 'claim-burn' })
 
-      // Get asset with proof
       const assetWithProof = await getAssetWithProof(umi as any, assetUmiKey, {
         truncateCanopy: true,
       })
 
-      // Use actual on-chain owner/delegate
       const leafOwner = currentOwnerStr ? umiPublicKey(currentOwnerStr) : umiPublicKey(wallet.publicKey.toBase58())
-
       const leafDelegate = currentDelegateStr ? umiPublicKey(currentDelegateStr) : leafOwner
 
-      // Build burn instructions
       const burnBuilder = burnV2(umi, {
         ...assetWithProof,
         leafOwner,
@@ -112,7 +105,6 @@ export function useClaimAndBurn() {
           : {}),
       })
 
-      // Get UMI instructions and convert to web3.js format
       const umiInstructions = burnBuilder.getInstructions()
       const burnInstructions: TransactionInstruction[] = umiInstructions.map((ix: any) => {
         const programId = new PublicKey(ix.programId.toString())
@@ -125,41 +117,95 @@ export function useClaimAndBurn() {
         return new TransactionInstruction({ programId, keys, data })
       })
 
-      toast.loading('Building transaction...', { id: 'claim-burn' })
+      toast.loading('Building transactions...', { id: 'claim-burn' })
 
-      // Step 3: Combine instructions into single transaction
-      const transaction = new Transaction()
-
-      // Add payout instructions first
-      payoutInstructions.forEach((ix) => transaction.add(ix))
-
-      // Then add burn instructions
-      burnInstructions.forEach((ix) => transaction.add(ix))
-
-      // Get recent blockhash
+      // Step 3: Build TWO separate transactions
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
-      transaction.recentBlockhash = blockhash
-      transaction.feePayer = payerPubkey
 
-      toast.loading('Waiting for signature...', { id: 'claim-burn' })
+      // Payout transaction
+      const payoutTx = new Transaction()
+      payoutInstructions.forEach((ix) => payoutTx.add(ix))
+      payoutTx.recentBlockhash = blockhash
+      payoutTx.feePayer = payerPubkey
 
-      // Step 4: Sign transaction
-      const signedTx = await wallet.signTransaction(transaction)
+      // Burn transaction
+      const burnTx = new Transaction()
+      burnInstructions.forEach((ix) => burnTx.add(ix))
+      burnTx.recentBlockhash = blockhash
+      burnTx.feePayer = payerPubkey
 
-      toast.loading('Claiming and burning...', { id: 'claim-burn' })
+      toast.loading('Waiting for signatures...', { id: 'claim-burn' })
 
-      // Step 5: Send transaction
-      const signature = await connection.sendRawTransaction(signedTx.serialize())
+      // Step 4: Sign BOTH transactions at once
+      const signedTxs = await wallet.signAllTransactions([payoutTx, burnTx])
+      const [signedPayoutTx, signedBurnTx] = signedTxs
 
-      // Wait for confirmation
-      await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight,
-      })
+      toast.loading('Claiming winnings...', { id: 'claim-burn' })
+
+      // Step 5: Send payout transaction and confirm
+      toast.loading('Claiming winnings...', { id: 'claim-burn' })
+
+      // Step 5: Send payout transaction and confirm - MUST succeed before burn
+      let payoutSignature: string
+      try {
+        payoutSignature = await connection.sendRawTransaction(signedPayoutTx.serialize())
+
+        const payoutConfirmation = await connection.confirmTransaction(
+          {
+            signature: payoutSignature,
+            blockhash,
+            lastValidBlockHeight,
+          },
+          'confirmed',
+        )
+
+        // Check if payout actually succeeded
+        if (payoutConfirmation.value.err) {
+          throw new Error(`Payout failed: ${JSON.stringify(payoutConfirmation.value.err)}`)
+        }
+
+        console.log('Payout confirmed successfully:', payoutSignature)
+      } catch (error: any) {
+        console.error('Payout transaction failed:', error)
+        toast.error('Payout failed - NFT not burned', { id: 'claim-burn' })
+        throw new Error(`Payout failed, burn aborted: ${error.message}`)
+      }
+
+      // Wait 2 seconds for state to propagate
+      toast.loading('Waiting for state update...', { id: 'claim-burn' })
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      toast.loading('Burning NFT...', { id: 'claim-burn' })
+
+      // Step 6: Only burn if payout confirmed successfully
+      let burnSignature: string
+      try {
+        burnSignature = await connection.sendRawTransaction(signedBurnTx.serialize())
+
+        const burnConfirmation = await connection.confirmTransaction(
+          {
+            signature: burnSignature,
+            blockhash,
+            lastValidBlockHeight,
+          },
+          'confirmed',
+        )
+
+        if (burnConfirmation.value.err) {
+          console.error('Burn failed but payout succeeded:', burnConfirmation.value.err)
+          toast.warning('Claimed successfully but burn failed', { id: 'claim-burn' })
+          return { payoutSignature, burnSignature: null, success: 'partial' }
+        }
+
+        console.log('Burn confirmed successfully:', burnSignature)
+      } catch (error: any) {
+        console.error('Burn transaction failed:', error)
+        toast.warning('Claimed successfully but burn failed', { id: 'claim-burn' })
+        return { payoutSignature, burnSignature: null, success: 'partial' }
+      }
 
       toast.success('Successfully claimed and burned NFT!', { id: 'claim-burn' })
-      return { signature, success: true }
+      return { payoutSignature, burnSignature, success: true }
     } catch (error: any) {
       console.error('Claim and burn error:', error)
 

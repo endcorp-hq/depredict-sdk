@@ -1,142 +1,339 @@
 'use client'
 
-import React, { useState } from 'react'
-import {
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Users,
-  DollarSign,
-  Info,
-  ArrowLeft,
-  Sparkles,
-  Trophy,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Calendar,
-  Activity,
-} from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { TrendingUp, TrendingDown, Clock, DollarSign, Info, ArrowLeft, Sparkles, Activity, CheckCircle } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
+import { useShortx } from '@/components/solana/useDepredict'
+import { Market, WinningDirection } from '@endcorp/depredict'
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
+import { Transaction, VersionedTransaction, PublicKey } from '@solana/web3.js'
+import { toast } from 'sonner'
 
 export default function MarketDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const marketId = params?.marketId || 'mk_001'
+  const marketId = params?.marketId ? Number(params.marketId) : null
+  const wallet = useWallet()
+  const { connection } = useConnection()
+  const { getAllPositionPagesForMarket, isInitialized, markets, client, openPosition } = useShortx()
 
   const [selectedOutcome, setSelectedOutcome] = useState<'yes' | 'no'>('yes')
   const [betAmount, setBetAmount] = useState('')
   const [isPlacingBet, setIsPlacingBet] = useState(false)
+  const [totalBets, setTotalBets] = useState<number>(0)
+  const [loadingBets, setLoadingBets] = useState(true)
+  const [market, setMarket] = useState<Market | null>(null)
+  const [loadingMarket, setLoadingMarket] = useState(true)
 
-  // Mock market data - replace with actual API call
-  const market = {
-    id: marketId,
-    title: 'Will ETH reach $5000 by end of 2025?',
-    description:
-      'This market will resolve to YES if Ethereum (ETH) reaches or exceeds $5000 USD on any major exchange (Coinbase, Binance, Kraken) at any point before December 31, 2025 11:59 PM UTC.',
-    status: 'active',
-    createdAt: 'Oct 1, 2025',
-    endTime: 'Dec 31, 2025',
-    resolutionTime: 'Jan 1, 2026',
-    category: 'Crypto',
-    yesPrice: 0.65,
-    noPrice: 0.35,
-    totalVolume: 45230.5,
-    totalBets: 1247,
-    uniqueTraders: 834,
-    liquidityPool: 125000,
-    creatorAddress: '7xKX...9mPq',
-    oracleType: 'Manual',
+  // Fetch market data
+  useEffect(() => {
+    const fetchMarket = async () => {
+      if (!marketId || !isInitialized || !client) return
+
+      setLoadingMarket(true)
+      try {
+        // First try to find in markets array
+        const foundMarket = markets.find((m) => Number(m.marketId) === marketId)
+        if (foundMarket) {
+          console.log('foundMarket', foundMarket)
+          setMarket(foundMarket)
+        } else {
+          // Fetch from SDK if not in array
+          const fetchedMarket = await client.trade.getMarketById(marketId)
+          if (fetchedMarket) {
+            setMarket(fetchedMarket)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch market:', error)
+      } finally {
+        setLoadingMarket(false)
+      }
+    }
+
+    fetchMarket()
+  }, [marketId, isInitialized, client, markets])
+
+  // Fetch total bets
+  useEffect(() => {
+    const fetchTotalBets = async () => {
+      if (!marketId || !isInitialized) return
+
+      setLoadingBets(true)
+      try {
+        const pages = await getAllPositionPagesForMarket(marketId)
+        console.log('pages', pages)
+        if (pages) {
+          const total = pages.reduce((sum, page) => sum + page.usedSlots, 0)
+          setTotalBets(total)
+        }
+      } catch (error) {
+        console.error('Failed to fetch position pages:', error)
+        setTotalBets(0)
+      } finally {
+        setLoadingBets(false)
+      }
+    }
+
+    fetchTotalBets()
+  }, [marketId, getAllPositionPagesForMarket, isInitialized])
+
+  // Calculate probabilities and prices from liquidity
+  const getMarketStats = () => {
+    if (!market) return { yesProb: 0.5, noProb: 0.5, totalLiquidity: 0, volume: 0 }
+
+    const yesLiq = Number(market.yesLiquidity) / 1e6
+    const noLiq = Number(market.noLiquidity) / 1e6
+    const totalLiq = yesLiq + noLiq
+
+    const yesProb = totalLiq > 0 ? yesLiq / totalLiq : 0.5
+    const noProb = totalLiq > 0 ? noLiq / totalLiq : 0.5
+    const volume = Number(market.volume) / 1e6
+
+    return { yesProb, noProb, totalLiquidity: totalLiq, volume }
   }
 
-  // Mock price history data
-  const priceHistory = [
-    { time: 'Oct 1', yes: 0.45, no: 0.55 },
-    { time: 'Oct 5', yes: 0.48, no: 0.52 },
-    { time: 'Oct 10', yes: 0.52, no: 0.48 },
-    { time: 'Oct 15', yes: 0.58, no: 0.42 },
-    { time: 'Oct 20', yes: 0.62, no: 0.38 },
-    { time: 'Oct 22', yes: 0.65, no: 0.35 },
-  ]
-
-  // Mock recent activity
-  const recentActivity = [
-    {
-      id: 1,
-      user: '7xKX...9mPq',
-      action: 'bought',
-      outcome: 'YES',
-      amount: 50.0,
-      shares: 76.92,
-      timestamp: '2 min ago',
-    },
-    {
-      id: 2,
-      user: '4aBC...3xYz',
-      action: 'sold',
-      outcome: 'NO',
-      amount: 25.0,
-      shares: 71.43,
-      timestamp: '15 min ago',
-    },
-    {
-      id: 3,
-      user: '9pQR...7wVu',
-      action: 'bought',
-      outcome: 'YES',
-      amount: 100.0,
-      shares: 153.85,
-      timestamp: '1 hour ago',
-    },
-  ]
-
-  const calculatePotentialReturn = () => {
-    if (!betAmount || isNaN(parseFloat(betAmount))) return 0
-    const amount = parseFloat(betAmount)
-    const price = selectedOutcome === 'yes' ? market.yesPrice : market.noPrice
-    return amount / price
+  const isResolved = () => {
+    if (!market) return false
+    const state = market.marketState?.toString().toLowerCase()
+    return state?.includes('resolved')
   }
 
-  const calculatePotentialProfit = () => {
-    const potentialReturn = calculatePotentialReturn()
-    const amount = parseFloat(betAmount) || 0
-    return potentialReturn - amount
+  const getWinningDirection = () => {
+    if (!market || !market.winningDirection) return null
+
+    const direction = market.winningDirection.toString().toLowerCase()
+    if (direction.includes('yes')) return 'YES'
+    if (direction.includes('no')) return 'NO'
+    if (direction.includes('draw')) return 'DRAW'
+    return null
   }
 
-  const handlePlaceBet = async () => {
-    setIsPlacingBet(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setIsPlacingBet(false)
-    setBetAmount('')
-    // Show success message or redirect
+  const stats = getMarketStats()
+
+  // Format timestamps
+  const formatDate = (timestamp: string | number) => {
+    const ts = Number(timestamp)
+    if (!ts || ts === 0) return 'TBD'
+    return new Date(ts * 1000).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
   }
 
   const getStatusBadge = () => {
-    switch (market.status) {
-      case 'active':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium">
-            <Activity className="w-4 h-4" />
-            Active
-          </span>
-        )
-      case 'closed':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-slate-400 text-sm font-medium">
-            <Clock className="w-4 h-4" />
-            Closed
-          </span>
-        )
-      case 'resolved':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
-            <CheckCircle className="w-4 h-4" />
-            Resolved
-          </span>
-        )
-      default:
-        return null
+    if (!market) return null
+
+    const state = market.marketState?.toString().toLowerCase()
+
+    if (state?.includes('active') || state?.includes('trading')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium">
+          <Activity className="w-4 h-4" />
+          Active
+        </span>
+      )
+    }
+
+    if (state?.includes('resolved')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
+          Resolved
+        </span>
+      )
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-500/10 border border-slate-500/20 text-slate-400 text-sm font-medium">
+        <Clock className="w-4 h-4" />
+        Pending
+      </span>
+    )
+  }
+
+  const calculatePayout = () => {
+    if (!betAmount || isNaN(parseFloat(betAmount)) || !market) return 0
+    const amount = parseFloat(betAmount)
+    const prob = selectedOutcome === 'yes' ? stats.yesProb : stats.noProb
+
+    // In parimutuel: if you win, you get (your bet / total losing pool) * total winning pool
+    // Simplified: potential return based on current odds
+    if (prob > 0) {
+      return amount / prob
+    }
+    return amount
+  }
+
+  const calculateProfit = () => {
+    const payout = calculatePayout()
+    const amount = parseFloat(betAmount) || 0
+    return payout - amount
+  }
+
+  const handlePlaceBet = async () => {
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      toast.error('Please connect your wallet first')
+      return
+    }
+
+    if (!client || !market) {
+      toast.error('Market not loaded')
+      return
+    }
+
+    const amount = parseFloat(betAmount)
+    if (!amount || amount <= 0) {
+      toast.error('Please enter a valid amount')
+      return
+    }
+
+    setIsPlacingBet(true)
+
+    try {
+      toast.loading('Preparing transaction...', { id: 'place-bet' })
+
+      const anchorDirection = selectedOutcome === "yes" ? { yes: {} } : { no: {} };
+
+      // Prepare openPosition arguments
+      const openArgs = {
+        marketId: Number(market.marketId),
+        amount: amount,
+        direction: anchorDirection,
+        payer: wallet.publicKey,
+        metadataUri: 'https://add-metadata-uri-here',
+      }
+
+      console.log('Opening position with args:', openArgs)
+
+      // Call openPosition from SDK
+      const result = await openPosition(openArgs)
+
+      if (!result) {
+        throw new Error('Failed to create position transaction')
+      }
+
+      toast.loading('Waiting for signature...', { id: 'place-bet' })
+
+      // Handle different return types
+      let signature: string
+
+      if (typeof result === 'string') {
+        // Already a signature (transaction was sent by SDK)
+        signature = result
+      } else if ('ixs' in result) {
+        // Got instructions back, need to build and sign transaction
+        const { ixs, addressLookupTableAccounts } = result
+
+        // Get recent blockhash
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
+
+        // Create transaction
+        const transaction = new Transaction()
+        transaction.add(...ixs)
+        transaction.recentBlockhash = blockhash
+        transaction.feePayer = wallet.publicKey
+
+        toast.loading('Signing transaction...', { id: 'place-bet' })
+
+        // Sign transaction
+        const signedTx = await wallet.signTransaction(transaction)
+
+        toast.loading('Sending transaction...', { id: 'place-bet' })
+
+        // Send transaction
+        signature = await connection.sendRawTransaction(signedTx.serialize())
+
+        toast.loading('Confirming transaction...', { id: 'place-bet' })
+
+        // Wait for confirmation
+        await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight,
+        })
+      } else {
+        throw new Error('Unexpected result format from openPosition')
+      }
+
+      console.log('Position opened successfully:', signature)
+
+      toast.success('Bet placed successfully!', { id: 'place-bet' })
+
+      // Clear bet amount
+      setBetAmount('')
+
+      // Refresh total bets after a delay
+      setTimeout(() => {
+        const refreshBets = async () => {
+          try {
+            const pages = await getAllPositionPagesForMarket(Number(market.marketId))
+            if (pages) {
+              const total = pages.reduce((sum, page) => sum + page.usedSlots, 0)
+              setTotalBets(total)
+            }
+          } catch (error) {
+            console.error('Failed to refresh bets:', error)
+          }
+        }
+        refreshBets()
+      }, 2000)
+
+    } catch (error: any) {
+      console.error('Place bet error:', error)
+      
+      const errorMsg = error?.message || String(error)
+      const errorLower = errorMsg.toLowerCase()
+
+      if (errorLower.includes('user rejected') || errorLower.includes('user denied')) {
+        toast.error('Transaction rejected', { id: 'place-bet' })
+      } else if (errorLower.includes('insufficient funds')) {
+        toast.error('Insufficient funds', { id: 'place-bet' })
+      } else if (errorLower.includes('blockhash not found')) {
+        toast.error('Transaction expired, please try again', { id: 'place-bet' })
+      } else {
+        toast.error(`Failed to place bet: ${errorMsg.slice(0, 100)}`, { id: 'place-bet' })
+      }
+    } finally {
+      setIsPlacingBet(false)
+    }
+  }
+
+  if (loadingMarket) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading market...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!market) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 text-lg mb-2">Market not found</p>
+          <button onClick={() => router.back()} className="text-slate-400 hover:text-white transition-colors">
+            ← Go back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Decode question from buffer if needed
+  const getQuestion = () => {
+    if (!market.question) return 'Untitled Market'
+
+    try {
+      if (Array.isArray(market.question)) {
+        return Buffer.from(market.question).toString('utf8').replace(/\0/g, '').trim()
+      }
+      return market.question.toString().trim()
+    } catch {
+      return 'Untitled Market'
     }
   }
 
@@ -163,63 +360,83 @@ export default function MarketDetailsPage() {
               <div className="flex items-center gap-3 mb-3">
                 {getStatusBadge()}
                 <span className="px-3 py-1 rounded-full bg-slate-700/50 text-slate-300 text-xs font-medium">
-                  {market.category}
+                  Market #{market.marketId}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-3">{market.title}</h1>
-              <p className="text-slate-400 text-sm md:text-base leading-relaxed">{market.description}</p>
+              <h1 className="text-3xl md:text-4xl font-bold mb-3">{getQuestion()}</h1>
+              <p className="text-slate-400 text-sm md:text-base leading-relaxed">
+                This is a parimutuel prediction market. All bets are pooled together, and winnings are distributed
+                proportionally among winners.
+              </p>
             </div>
           </div>
 
           {/* Market Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
               <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
                 <DollarSign className="w-4 h-4" />
                 Volume
               </div>
-              <div className="text-xl font-bold">${market.totalVolume.toLocaleString()}</div>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
-                <Users className="w-4 h-4" />
-                Traders
+              <div className="text-xl font-bold">
+                ${stats.volume.toLocaleString(undefined, { maximumFractionDigits: 2 })}
               </div>
-              <div className="text-xl font-bold">{market.uniqueTraders}</div>
             </div>
             <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
               <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
                 <Activity className="w-4 h-4" />
                 Total Bets
               </div>
-              <div className="text-xl font-bold">{market.totalBets}</div>
+              <div className="text-xl font-bold">
+                {loadingBets ? <span className="text-slate-500">Loading...</span> : totalBets}
+              </div>
             </div>
             <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
               <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
                 <Clock className="w-4 h-4" />
-                Ends
+                {isResolved() ? 'Resolved on' : 'Ends'}
               </div>
-              <div className="text-xl font-bold">{market.endTime}</div>
+              <div className="text-xl font-bold">
+                {isResolved() ? formatDate(market.marketEnd) : formatDate(market.marketEnd)}
+              </div>
+              {isResolved() && getWinningDirection() && (
+                <div
+                  className={`text-sm mt-1 font-semibold ${
+                    getWinningDirection() === 'YES'
+                      ? 'text-purple-400'
+                      : getWinningDirection() === 'NO'
+                        ? 'text-slate-300'
+                        : 'text-yellow-400'
+                  }`}
+                >
+                  Winner: {getWinningDirection()}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Chart & Activity */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Probability Chart */}
+        <div className={`grid ${isResolved() ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6`}>
+          {/* Left Column - Odds */}
+          <div className={`${isResolved() ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-6`}>
+            {/* Current Odds */}
             <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
-              <h2 className="text-xl font-bold mb-6">Market Probability</h2>
+              <h2 className="text-xl font-bold mb-6">Current Odds</h2>
 
-              {/* Current Odds Display */}
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="p-6 rounded-xl bg-purple-500/10 border border-purple-500/20">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-purple-400">YES</span>
                     <TrendingUp className="w-5 h-5 text-purple-400" />
                   </div>
-                  <div className="text-4xl font-bold text-purple-400 mb-1">{(market.yesPrice * 100).toFixed(1)}%</div>
-                  <div className="text-sm text-slate-400">${market.yesPrice.toFixed(2)} per share</div>
+                  <div className="text-4xl font-bold text-purple-400 mb-1">{(stats.yesProb * 100).toFixed(1)}%</div>
+                  <div className="text-sm text-slate-400">
+                    $
+                    {stats.totalLiquidity > 0
+                      ? (Number(market.yesLiquidity) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })
+                      : '0'}{' '}
+                    pool
+                  </div>
                 </div>
 
                 <div className="p-6 rounded-xl bg-slate-700/30 border border-slate-600/50">
@@ -227,103 +444,25 @@ export default function MarketDetailsPage() {
                     <span className="text-sm font-medium text-slate-300">NO</span>
                     <TrendingDown className="w-5 h-5 text-slate-400" />
                   </div>
-                  <div className="text-4xl font-bold text-slate-300 mb-1">{(market.noPrice * 100).toFixed(1)}%</div>
-                  <div className="text-sm text-slate-400">${market.noPrice.toFixed(2)} per share</div>
-                </div>
-              </div>
-
-              {/* Simple Line Chart */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-slate-400">Price History</h3>
-                <div className="relative h-64">
-                  <svg className="w-full h-full" viewBox="0 0 600 200" preserveAspectRatio="none">
-                    {/* Grid lines */}
-                    <line x1="0" y1="0" x2="600" y2="0" stroke="#334155" strokeWidth="1" opacity="0.3" />
-                    <line x1="0" y1="50" x2="600" y2="50" stroke="#334155" strokeWidth="1" opacity="0.3" />
-                    <line x1="0" y1="100" x2="600" y2="100" stroke="#334155" strokeWidth="1" opacity="0.3" />
-                    <line x1="0" y1="150" x2="600" y2="150" stroke="#334155" strokeWidth="1" opacity="0.3" />
-                    <line x1="0" y1="200" x2="600" y2="200" stroke="#334155" strokeWidth="1" opacity="0.3" />
-
-                    {/* YES line */}
-                    <polyline
-                      fill="none"
-                      stroke="#a855f7"
-                      strokeWidth="3"
-                      points={priceHistory
-                        .map((point, i) => `${(i * 600) / (priceHistory.length - 1)},${200 - point.yes * 200}`)
-                        .join(' ')}
-                    />
-
-                    {/* NO line */}
-                    <polyline
-                      fill="none"
-                      stroke="#64748b"
-                      strokeWidth="3"
-                      strokeDasharray="5,5"
-                      points={priceHistory
-                        .map((point, i) => `${(i * 600) / (priceHistory.length - 1)},${200 - point.no * 200}`)
-                        .join(' ')}
-                    />
-                  </svg>
-
-                  {/* X-axis labels */}
-                  <div className="flex justify-between text-xs text-slate-500 mt-2">
-                    {priceHistory.map((point, i) => (
-                      <span key={i}>{point.time}</span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Legend */}
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-0.5 bg-purple-500"></div>
-                    <span className="text-slate-400">YES</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-0.5 bg-slate-500 border-dashed border-t-2 border-slate-500"></div>
-                    <span className="text-slate-400">NO</span>
+                  <div className="text-4xl font-bold text-slate-300 mb-1">{(stats.noProb * 100).toFixed(1)}%</div>
+                  <div className="text-sm text-slate-400">
+                    $
+                    {stats.totalLiquidity > 0
+                      ? (Number(market.noLiquidity) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })
+                      : '0'}{' '}
+                    pool
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Recent Activity */}
-            <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
-              <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-              <div className="space-y-3">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-slate-900/50 border border-slate-700/30"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          activity.action === 'bought' ? 'bg-green-400' : 'bg-red-400'
-                        }`}
-                      ></div>
-                      <div>
-                        <div className="text-sm">
-                          <span className="font-mono text-slate-400">{activity.user}</span>{' '}
-                          <span className="text-slate-500">{activity.action}</span>{' '}
-                          <span
-                            className={`font-semibold ${
-                              activity.outcome === 'YES' ? 'text-purple-400' : 'text-slate-300'
-                            }`}
-                          >
-                            {activity.outcome}
-                          </span>
-                        </div>
-                        <div className="text-xs text-slate-500">{activity.timestamp}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold">${activity.amount.toFixed(2)}</div>
-                      <div className="text-xs text-slate-500">{activity.shares.toFixed(2)} shares</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-700/30">
+                <div className="flex items-start gap-2 text-xs text-slate-400">
+                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <p>
+                    Odds represent the current distribution of bets. Your potential payout depends on the final pool
+                    sizes when the market closes.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -332,34 +471,29 @@ export default function MarketDetailsPage() {
               <h2 className="text-xl font-bold mb-4">Market Information</h2>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b border-slate-700/50">
-                  <span className="text-slate-400">Created</span>
-                  <span className="font-medium">{market.createdAt}</span>
+                  <span className="text-slate-400">Market ID</span>
+                  <span className="font-medium">#{market.marketId}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-700/50">
+                  <span className="text-slate-400">Trading Starts</span>
+                  <span className="font-medium">{formatDate(market.marketStart)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-700/50">
                   <span className="text-slate-400">Trading Ends</span>
-                  <span className="font-medium">{market.endTime}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-slate-700/50">
-                  <span className="text-slate-400">Resolution Time</span>
-                  <span className="font-medium">{market.resolutionTime}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-slate-700/50">
-                  <span className="text-slate-400">Oracle Type</span>
-                  <span className="font-medium">{market.oracleType}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-slate-700/50">
-                  <span className="text-slate-400">Liquidity Pool</span>
-                  <span className="font-medium">${market.liquidityPool.toLocaleString()}</span>
+                  <span className="font-medium">{formatDate(market.marketEnd)}</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="text-slate-400">Creator</span>
-                  <span className="font-mono text-xs">{market.creatorAddress}</span>
+                  <span className="text-slate-400">Total Pool</span>
+                  <span className="font-medium">
+                    ${stats.totalLiquidity.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Order Box */}
+          {/* Right Column - Betting Box */}
+          {!isResolved() && (
           <div className="lg:col-span-1">
             <div className="sticky top-24">
               <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
@@ -381,7 +515,7 @@ export default function MarketDetailsPage() {
                       }`}
                     >
                       <div className="font-bold text-lg mb-1">YES</div>
-                      <div className="text-xs">{(market.yesPrice * 100).toFixed(1)}%</div>
+                      <div className="text-xs">{(stats.yesProb * 100).toFixed(1)}%</div>
                     </button>
                     <button
                       onClick={() => setSelectedOutcome('no')}
@@ -392,14 +526,14 @@ export default function MarketDetailsPage() {
                       }`}
                     >
                       <div className="font-bold text-lg mb-1">NO</div>
-                      <div className="text-xs">{(market.noPrice * 100).toFixed(1)}%</div>
+                      <div className="text-xs">{(stats.noProb * 100).toFixed(1)}%</div>
                     </button>
                   </div>
                 </div>
 
                 {/* Bet Amount */}
                 <div className="mb-6">
-                  <label className="text-sm font-medium text-slate-300 mb-2 block">Bet Amount (USD)</label>
+                  <label className="text-sm font-medium text-slate-300 mb-2 block">Bet Amount (USDC)</label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
@@ -429,17 +563,17 @@ export default function MarketDetailsPage() {
                 {betAmount && !isNaN(parseFloat(betAmount)) && (
                   <div className="mb-6 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Shares to receive</span>
-                      <span className="font-semibold text-purple-400">{calculatePotentialReturn().toFixed(2)}</span>
+                      <span className="text-slate-400">Potential payout</span>
+                      <span className="font-semibold text-purple-400">${calculatePayout().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Potential profit</span>
-                      <span className="font-semibold text-green-400">+${calculatePotentialProfit().toFixed(2)}</span>
+                      <span className="font-semibold text-green-400">+${calculateProfit().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Average price</span>
+                      <span className="text-slate-400">Current odds</span>
                       <span className="font-semibold">
-                        ${(selectedOutcome === 'yes' ? market.yesPrice : market.noPrice).toFixed(3)}
+                        {((selectedOutcome === 'yes' ? stats.yesProb : stats.noProb) * 100).toFixed(1)}%
                       </span>
                     </div>
                   </div>
@@ -448,20 +582,30 @@ export default function MarketDetailsPage() {
                 {/* Place Bet Button */}
                 <button
                   onClick={handlePlaceBet}
-                  disabled={!betAmount || isNaN(parseFloat(betAmount)) || parseFloat(betAmount) <= 0 || isPlacingBet}
+                  disabled={
+                    !wallet.publicKey ||
+                    !betAmount ||
+                    isNaN(parseFloat(betAmount)) ||
+                    parseFloat(betAmount) <= 0 ||
+                    isPlacingBet
+                  }
                   className={`w-full py-4 rounded-xl font-semibold transition-all ${
-                    !betAmount || isNaN(parseFloat(betAmount)) || parseFloat(betAmount) <= 0 || isPlacingBet
+                    !wallet.publicKey
+                      ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
+                      : !betAmount || isNaN(parseFloat(betAmount)) || parseFloat(betAmount) <= 0 || isPlacingBet
                       ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
                       : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
                   }`}
                 >
-                  {isPlacingBet ? (
+                  {!wallet.publicKey ? (
+                    'Connect Wallet to Bet'
+                  ) : isPlacingBet ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                       Placing Bet...
                     </span>
                   ) : (
-                    `Buy ${selectedOutcome.toUpperCase()} Shares`
+                    `Bet on ${selectedOutcome.toUpperCase()}`
                   )}
                 </button>
 
@@ -470,15 +614,46 @@ export default function MarketDetailsPage() {
                   <div className="flex items-start gap-2 text-xs text-slate-400">
                     <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     <p>
-                      You'll receive shares that can be sold anytime or redeemed for $1 each if your prediction is
-                      correct.
+                      In parimutuel betting, winners split the losing pool proportionally. Your final payout depends on
+                      the total amounts bet on each outcome.
                     </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+          )}
         </div>
+        {isResolved() && (
+  <div className="lg:col-span-1">
+    <div className="sticky top-24">
+      <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/20 mb-4">
+            <CheckCircle className="w-8 h-8 text-green-400" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">Market Resolved</h3>
+          <p className="text-slate-400 mb-4">
+            This market has been settled.
+          </p>
+          {getWinningDirection() && (
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
+              getWinningDirection() === 'YES' 
+                ? 'bg-purple-500/20 border border-purple-500/30 text-purple-400' 
+                : getWinningDirection() === 'NO'
+                ? 'bg-slate-700/50 border border-slate-600 text-slate-200'
+                : 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-400'
+            }`}>
+              {getWinningDirection() === 'YES' && <TrendingUp className="w-5 h-5" />}
+              {getWinningDirection() === 'NO' && <TrendingDown className="w-5 h-5" />}
+              Winner: {getWinningDirection()}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   )

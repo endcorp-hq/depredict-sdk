@@ -11,6 +11,7 @@ import { Market, OpenOrderArgs, CreateMarketArgs, MarketStates, WinningDirection
 import { Position } from '@endcorp/depredict'
 import BN from 'bn.js'
 import { useSolana } from './use-solana'
+import { useMarketCreator, MarketCreatorStatus } from '@/hooks/use-market-creator'
 
 export enum DepredictErrorType {
   MARKET_CREATION = 'MARKET_CREATION',
@@ -47,6 +48,7 @@ interface ShortxContextType {
   loadingMarkets: boolean
   error: DepredictError | null
   isInitialized: boolean
+  marketCreatorStatus: MarketCreatorStatus
   recentTrades: Position[]
   marketEvents: {
     marketId: number
@@ -133,6 +135,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
   const [loadingMarkets, setLoadingMarkets] = useState(true)
   const [depredictError, setDepredictError] = useState<DepredictError | null>(null)
   const [refreshCount, setRefreshCount] = useState(0)
+  const marketCreatorStatus = useMarketCreator(client, isInitialized);
 //   const [marketCreatorPubkey, setMarketCreatorPubkey] = useState<PublicKey | null>(null)
   const [recentTrades, setRecentTrades] = useState<Position[]>([])
   const [marketEvents, setMarketEvents] = useState<
@@ -180,9 +183,20 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
 
   //fetch markets on load
   useEffect(() => {
-    if (!client) return
+    // Only fetch markets if market creator exists and is verified
+    if (!client || !isInitialized || !marketCreatorStatus.exists || !marketCreatorStatus.isVerified) {
+      console.log('Skipping market fetch:', {
+        hasClient: !!client,
+        isInitialized: isInitialized,
+        marketCreatorExists: marketCreatorStatus.exists,
+        isVerified: marketCreatorStatus.isVerified,
+      })
+      setLoadingMarkets(false)
+      return
+    }
+    
     fetchAllMarkets()
-  }, [client, refreshCount])
+  }, [client, refreshCount, marketCreatorStatus.exists, marketCreatorStatus.isVerified])
 
   // Update markets in real-time when market events are received
   useEffect(() => {
@@ -481,6 +495,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
         marketId: args.marketId,
         payer: args.payer,
         assetId: args.assetId,
+        rpcEndpoint: 'https://devnet.helius-rpc.com/?api-key=c7c71360-ee3b-437a-bc8d-0c2931d673df',
       })
       return tx
     } catch (err) {
@@ -579,6 +594,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
         loadingMarkets,
         error:depredictError,
         isInitialized,
+        marketCreatorStatus,
         recentTrades,
         marketEvents,
         refresh,

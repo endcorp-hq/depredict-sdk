@@ -4,6 +4,7 @@ import React from 'react'
 import { Market, MarketType, WinningDirection } from '@endcorp/depredict'
 import { Clock, Radio, PlayCircle, Gavel, CheckCircle, XCircle, MinusCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 interface MarketCardProps {
   market: Market
@@ -174,6 +175,7 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
   }
 
   return (
+    <Link href={`/market/${market.marketId}`}>
     <div
       onClick={onClick}
       className={cn(
@@ -252,5 +254,6 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
         {market.marketId ?? 'none'}
       </div>
     </div>
+    </Link>
   )
 }
