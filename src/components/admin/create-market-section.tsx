@@ -358,7 +358,7 @@ export function CreateMarketSection() {
               <li>• Make your question clear and unambiguous</li>
               <li>• Betting start must be after now and before market start</li>
               <li>• Market start is when betting closes and the event begins</li>
-              <li>• Manual oracle means you'll need to resolve the market yourself</li>
+              <li>• Manual oracle means you`&apos;`ll need to resolve the market yourself</li>
               <li>• Initial liquidity helps bootstrap trading</li>
             </ul>
           </div>

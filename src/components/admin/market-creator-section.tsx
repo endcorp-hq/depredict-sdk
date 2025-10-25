@@ -141,7 +141,7 @@ export function MarketCreatorSection() {
         <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50">
           <h2 className="text-2xl font-bold mb-4">Step 1: Create Market Creator</h2>
           <p className="text-slate-400 mb-6">
-            Create an unverified market creator account. You'll verify it in the next step.
+            Create an unverified market creator account. You`&apos;`ll verify it in the next step.
           </p>
 
           <div className="space-y-4">
@@ -194,7 +194,7 @@ export function MarketCreatorSection() {
           </div>
           
           <p className="text-slate-400 mb-4">
-            Market creator created successfully! Now let's verify it with a collection and merkle tree.
+            Market creator created successfully! Now let`&apos;`s verify it with a collection and merkle tree.
           </p>
 
           <div className="p-4 rounded-lg bg-slate-900/50 border border-slate-700/30 mb-6">

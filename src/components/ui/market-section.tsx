@@ -118,7 +118,7 @@ export function MarketsSection() {
           </Link>
 
           <div className="mt-12 p-6 rounded-xl bg-slate-800/30 border border-slate-700/50 text-left">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3">What you'll need to do:</h3>
+            <h3 className="text-sm font-semibold text-slate-300 mb-3">What you`&apos;`ll need to do:</h3>
             <ul className="text-sm text-slate-400 space-y-2">
               <li className="flex items-start gap-2">
                 <span className="text-blue-400 mt-0.5">•</span>
@@ -157,7 +157,7 @@ export function MarketsSection() {
           <h2 className="text-3xl font-bold mb-4">Verification Required</h2>
           
           <p className="text-slate-400 text-lg mb-8 leading-relaxed">
-            Your market creator account exists but hasn't been verified yet. 
+            Your market creator account exists but hasn`&apos;`t been verified yet. 
             Complete the verification process to start creating and displaying markets.
           </p>
 

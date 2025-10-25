@@ -59,7 +59,7 @@ export function MarketCreatorStats({ marketCreatorPda }: MarketCreatorStatsProps
         <div className="p-6 rounded-xl bg-slate-800/50 border border-slate-700/50 text-center">
           <p className="text-slate-400 mb-2">No markets found</p>
           <p className="text-sm text-slate-500">
-            Create your first market using the "Create Market" tab above
+            Create your first market using the `&apos;`Create Market`&apos;` tab above
           </p>
         </div>
       </div>
