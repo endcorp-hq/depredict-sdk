@@ -110,6 +110,7 @@ interface ShortxContextType {
     creatorFeeBps: number
   }) => Promise<TransactionInstruction[] | null>
   updateMerkleTree: (args: { signer: PublicKey; newTree: PublicKey }) => Promise<TransactionInstruction[] | null>
+  updateMarketOptimistic: (marketId: string, updates: Partial<Market>) => void
 }
 
 type PositionPageInfo = {
@@ -586,6 +587,16 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
       return null
     }
   }
+
+  const updateMarketOptimistic = (marketId: string, updates: Partial<Market>) => {
+    setMarkets((prevMarkets) => 
+      prevMarkets.map((m) => 
+        m.marketId === marketId 
+          ? { ...m, ...updates } 
+          : m
+      )
+    )
+  }
   return (
     <ShortxContext.Provider
       value={{
@@ -597,6 +608,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
         marketCreatorStatus,
         recentTrades,
         marketEvents,
+        updateMarketOptimistic,
         refresh,
         openPosition,
         getAllPositionPagesForMarket,

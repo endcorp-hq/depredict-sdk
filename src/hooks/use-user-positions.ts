@@ -46,7 +46,7 @@ interface ParsedAsset {
 }
 
 export function useUserPositions() {
-  const { account, cluster } = useSolana()
+  const { account } = useSolana()
   const [assets, setAssets] = useState<Asset[]>([])
   const [parsedAssets, setParsedAssets] = useState<ParsedAsset[]>([])
   const [loading, setLoading] = useState(false)
@@ -161,7 +161,7 @@ export function useUserPositions() {
       setAssets([])
       setParsedAssets([])
     }
-  }, [account?.address, cluster])
+  }, [account?.address])
 
   return {
     assets,

@@ -8,6 +8,7 @@ import { Market, WinningDirection } from '@endcorp/depredict'
 import { useWallet, useConnection } from '@solana/wallet-adapter-react'
 import { Transaction, VersionedTransaction, PublicKey } from '@solana/web3.js'
 import { toast } from 'sonner'
+import { useSolana } from '../solana/use-solana'
 
 export default function MarketDetailsPage() {
   const params = useParams()
@@ -15,7 +16,12 @@ export default function MarketDetailsPage() {
   const marketId = params?.marketId ? Number(params.marketId) : null
   const wallet = useWallet()
   const { connection } = useConnection()
-  const { getAllPositionPagesForMarket, isInitialized, markets, client, openPosition } = useShortx()
+  const {account} = useSolana();
+  const { getAllPositionPagesForMarket, isInitialized, markets, client, openPosition, updateMarketOptimistic } = useShortx()
+  
+
+  console.log('account', account)
+  console.log('wallet', wallet)
 
   const [selectedOutcome, setSelectedOutcome] = useState<'yes' | 'no'>('yes')
   const [betAmount, setBetAmount] = useState('')
@@ -87,7 +93,6 @@ export default function MarketDetailsPage() {
       setLoadingBets(true)
       try {
         const pages = await getAllPositionPagesForMarket(marketId)
-        console.log('pages', pages)
         if (pages) {
           const total = pages.reduce((sum, page) => sum + page.usedSlots, 0)
           setTotalBets(total)
@@ -290,22 +295,45 @@ export default function MarketDetailsPage() {
 
       // Clear bet amount
       setBetAmount('')
-
-      // Refresh total bets after a delay
-      setTimeout(() => {
-        const refreshBets = async () => {
-          try {
-            const pages = await getAllPositionPagesForMarket(Number(market.marketId))
-            if (pages) {
-              const total = pages.reduce((sum, page) => sum + page.usedSlots, 0)
-              setTotalBets(total)
-            }
-          } catch (error) {
-            console.error('Failed to refresh bets:', error)
-          }
+      
+      // OPTIMISTIC UPDATES - Update UI immediately
+      const amountInMicroUnits = amount * 1e6 // Convert to micro units
+      
+      // 1. Optimistically increment total bets
+      setTotalBets((prev) => prev + 1)
+      
+      // 2. Optimistically update market liquidity and volume
+      if (market) {
+        const updatedYesLiquidity = selectedOutcome === 'yes' 
+          ? (Number(market.yesLiquidity) + amountInMicroUnits).toString()
+          : market.yesLiquidity
+        
+        const updatedNoLiquidity = selectedOutcome === 'no'
+          ? (Number(market.noLiquidity) + amountInMicroUnits).toString()
+          : market.noLiquidity
+        
+        const updatedVolume = (Number(market.volume) + amountInMicroUnits).toString()
+        
+        const optimisticMarket = {
+          ...market,
+          yesLiquidity: updatedYesLiquidity,
+          noLiquidity: updatedNoLiquidity,
+          volume: updatedVolume,
         }
-        refreshBets()
-      }, 2000)
+        
+        // Update local market state
+        setMarket(optimisticMarket)
+        
+        // Update global markets array in context
+        updateMarketOptimistic(market.marketId, {
+          yesLiquidity: updatedYesLiquidity,
+          noLiquidity: updatedNoLiquidity,
+          volume: updatedVolume,
+        })
+      }
+      
+      // Clear bet amount
+      setBetAmount('')
 
     } catch (error: any) {
       console.error('Place bet error:', error)

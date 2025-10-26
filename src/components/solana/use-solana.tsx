@@ -1,17 +1,37 @@
-import { useWalletUi } from '@wallet-ui/react'
-import { useWalletUiGill } from '@wallet-ui/react-gill'
+'use client'
 
-/**
- * Custom hook to abstract Wallet UI and related functionality from your app.
- *
- * This is a great place to add custom shared Solana logic or clients.
- */
+import { useWallet, useConnection } from '@solana/wallet-adapter-react'
+
 export function useSolana() {
-  const walletUi = useWalletUi()
-  const client = useWalletUiGill()
+  const {
+    connected,
+    connecting,
+    disconnecting,
+    publicKey,
+    wallet,
+    wallets,
+    select,
+    connect,
+    disconnect,
+    signTransaction,
+    signAllTransactions,
+  } = useWallet()
+  const { connection } = useConnection()
+
 
   return {
-    ...walletUi,
-    client,
+    connected,
+    connecting,
+    disconnecting,
+    publicKey,
+    wallet,
+    wallets,
+    account: publicKey ? { address: publicKey.toBase58() } : null,
+    select,
+    connect,
+    disconnect,
+    signTransaction,
+    signAllTransactions,
+    connection,
   }
 }
