@@ -495,7 +495,7 @@ export const ShortxProvider = ({ children }: { children: ReactNode }) => {
         marketId: args.marketId,
         payer: args.payer,
         assetId: args.assetId,
-        rpcEndpoint: 'https://devnet.helius-rpc.com/?api-key=c7c71360-ee3b-437a-bc8d-0c2931d673df',
+        rpcEndpoint: process.env.NEXT_PUBLIC_RPC_ENDPOINT!,
       })
       return tx
     } catch (err) {

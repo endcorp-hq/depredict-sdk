@@ -30,7 +30,7 @@ export function useClaimAndBurn() {
     setIsProcessing(true)
 
     try {
-      const rpcEndpoint = 'https://devnet.helius-rpc.com/?api-key=c7c71360-ee3b-437a-bc8d-0c2931d673df'
+      const rpcEndpoint = process.env.NEXT_PUBLIC_RPC_ENDPOINT!
       const assetPublicKey = new PublicKey(assetId)
       const payerPubkey = wallet.publicKey
 

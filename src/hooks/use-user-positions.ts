@@ -93,7 +93,7 @@ export function useUserPositions() {
       }
 
       // Get RPC endpoint from cluster
-      const rpcEndpoint = "https://devnet.helius-rpc.com/?api-key=c7c71360-ee3b-437a-bc8d-0c2931d673df"
+      const rpcEndpoint = process.env.NEXT_PUBLIC_RPC_ENDPOINT!
 
       const dasResponse = await fetch(rpcEndpoint, {
         method: 'POST',

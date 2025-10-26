@@ -22,7 +22,7 @@ export function useBurnNft() {
     
     try {
       // Get RPC endpoint
-      const rpcEndpoint = "https://devnet.helius-rpc.com/?api-key=c7c71360-ee3b-437a-bc8d-0c2931d673df"
+      const rpcEndpoint = process.env.NEXT_PUBLIC_RPC_ENDPOINT!
       
       // Create umi instance with DAS API plugin and wallet adapter
       const umi = createUmi(rpcEndpoint)
