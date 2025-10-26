@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Market, MarketType, WinningDirection } from '@endcorp/depredict'
-import { Clock, Radio, PlayCircle, Gavel, CheckCircle, XCircle, MinusCircle } from 'lucide-react'
+import { Clock, Radio, PlayCircle, Gavel, CheckCircle, XCircle, MinusCircle, Trophy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -41,39 +41,39 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
       // Return the winning direction
       if (market.winningDirection === WinningDirection.YES) {
         return {
-          text: 'YES',
-          color: 'text-purple-400',
-          bgColor: 'bg-purple-500/10',
-          borderColor: 'border-purple-500/20',
+          text: 'YES WINS',
+          color: 'text-emerald-400',
+          bgColor: 'bg-emerald-500/10',
+          borderColor: 'border-emerald-500/20',
           icon: CheckCircle,
-          barColor: 'from-purple-500 to-purple-600',
+          barColor: 'from-emerald-500 to-green-500',
         }
       } else if (market.winningDirection === WinningDirection.NO) {
         return {
-          text: 'NO',
-          color: 'text-purple-400',
-          bgColor: 'bg-purple-500/10',
-          borderColor: 'border-purple-500/20',
+          text: 'NO WINS',
+          color: 'text-slate-400',
+          bgColor: 'bg-slate-500/10',
+          borderColor: 'border-slate-500/20',
           icon: XCircle,
-          barColor: 'from-purple-500 to-purple-600',
+          barColor: 'from-slate-500 to-slate-600',
         }
       } else if (market.winningDirection === WinningDirection.DRAW) {
         return {
           text: 'DRAW',
-          color: 'text-purple-400',
-          bgColor: 'bg-purple-500/10',
-          borderColor: 'border-purple-500/20',
+          color: 'text-yellow-400',
+          bgColor: 'bg-yellow-500/10',
+          borderColor: 'border-yellow-500/20',
           icon: MinusCircle,
-          barColor: 'from-purple-500 to-purple-600',
+          barColor: 'from-yellow-500 to-yellow-600',
         }
       } else {
         return {
           text: 'RESOLVED',
-          color: 'text-purple-400',
-          bgColor: 'bg-purple-500/10',
-          borderColor: 'border-purple-500/20',
+          color: 'text-emerald-400',
+          bgColor: 'bg-emerald-500/10',
+          borderColor: 'border-emerald-500/20',
           icon: CheckCircle,
-          barColor: 'from-purple-500 to-purple-600',
+          barColor: 'from-emerald-500 to-green-500',
         }
       }
     } else {
@@ -84,43 +84,43 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
       if (isLive) {
         // Live market - betting happens during market interval
         return {
-          text: 'LIVE',
-          color: 'text-blue-400',
-          bgColor: 'bg-blue-500/10',
-          borderColor: 'border-blue-500/20',
+          text: 'LIVE NOW',
+          color: 'text-red-400',
+          bgColor: 'bg-red-500/10',
+          borderColor: 'border-red-500/20',
           icon: Radio,
-          barColor: 'from-blue-500 to-blue-600',
+          barColor: 'from-red-500 to-red-600',
         }
       } else {
         // Future market
         if (now >= marketStart && now <= marketEnd) {
           // Market is currently running (active/observing)
           return {
-            text: 'Observing',
-            color: 'text-blue-400',
-            bgColor: 'bg-blue-500/10',
-            borderColor: 'border-blue-500/20',
+            text: 'IN PLAY',
+            color: 'text-orange-400',
+            bgColor: 'bg-orange-500/10',
+            borderColor: 'border-orange-500/20',
             icon: PlayCircle,
-            barColor: 'from-blue-500 to-blue-600',
+            barColor: 'from-orange-500 to-orange-600',
           }
         } else if (now < marketStart) {
           // Betting period (predicting)
           return {
-            text: 'Predicting',
+            text: 'OPEN',
             color: 'text-emerald-400',
             bgColor: 'bg-emerald-500/10',
             borderColor: 'border-emerald-500/20',
-            icon: Gavel,
-            barColor: 'from-emerald-500 to-emerald-600',
+            icon: Trophy,
+            barColor: 'from-emerald-500 to-green-500',
           }
         } else {
           // Market has ended but not resolved
           return {
-            text: 'Observing',
+            text: 'ENDED',
             color: 'text-blue-400',
             bgColor: 'bg-blue-500/10',
             borderColor: 'border-blue-500/20',
-            icon: PlayCircle,
+            icon: Clock,
             barColor: 'from-blue-500 to-blue-600',
           }
         }
@@ -136,7 +136,7 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
     const now = Date.now()
     const end = parseInt(endTimestamp) * 1000
     const diff = end - now
-    if (diff <= 0) return 'market ended'
+    if (diff <= 0) return 'match ended'
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
     if (hours > 0) return `${hours}h ${minutes}m left`
@@ -148,12 +148,12 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
     const now = Date.now()
     const start = parseInt(startTimestamp) * 1000
     const diff = start - now
-    if (diff <= 0) return 'betting ended'
+    if (diff <= 0) return 'betting closed'
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    if (hours > 0) return `betting ends in ${hours}h ${minutes}m`
-    if (minutes > 0) return `betting ends in ${minutes}m`
-    return 'betting ends soon'
+    if (hours > 0) return `bet closes in ${hours}h ${minutes}m`
+    if (minutes > 0) return `bet closes in ${minutes}m`
+    return 'closing soon'
   }
 
   const formatTime = (timestamp: string) => {
@@ -179,8 +179,8 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
     <div
       onClick={onClick}
       className={cn(
-        'group relative rounded-xl bg-slate-800/30 border border-slate-700/50 p-6 space-y-4 transition-all duration-300',
-        'hover:border-purple-500/50 hover:bg-slate-800/50 hover:shadow-lg hover:shadow-purple-500/10',
+        'group relative rounded-xl bg-slate-900/70 border border-slate-700/50 p-6 space-y-4 transition-all duration-300',
+        'hover:border-emerald-500/50 hover:bg-slate-800/70 hover:shadow-lg hover:shadow-emerald-500/10',
         onClick && 'cursor-pointer hover:scale-[1.02]'
       )}
     >
@@ -192,66 +192,70 @@ export function MarketCard({ market, onClick }: MarketCardProps) {
           status.borderColor
         )}>
           <StatusIcon className={cn('w-4 h-4', status.color)} />
-          <span className={cn('text-xs font-semibold', status.color)}>
+          <span className={cn('text-xs font-bold uppercase tracking-wide', status.color)}>
             {status.text}
           </span>
         </div>
-        <span className="text-white text-base font-bold">
-          ${formattedVolume}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-emerald-400 text-xs font-semibold">Vol:</span>
+          <span className="text-white text-base font-bold">
+            ${formattedVolume}
+          </span>
+        </div>
       </div>
 
       {/* Question */}
-      <h3 className="font-semibold text-lg leading-tight line-clamp-3 min-h-[4.5rem] group-hover:text-purple-400 transition-colors">
+      <h3 className="font-bold text-lg leading-tight line-clamp-3 min-h-[4.5rem] group-hover:text-emerald-400 transition-colors">
         {market.question || `Market #${market.marketId}`}
       </h3>
 
       {/* Time Range */}
-      <div className="flex items-center gap-2 text-sm text-slate-300">
-        <Clock className="w-4 h-4 text-slate-400" />
+      <div className="flex items-center gap-2 text-sm text-slate-400">
+        <Clock className="w-4 h-4 text-emerald-400/70" />
         <span>
-          {formatTime(market.marketStart)} to {formatTime(market.marketEnd)}
+          {formatTime(market.marketStart)} - {formatTime(market.marketEnd)}
         </span>
       </div>
 
       {/* Probability Section */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-white text-lg font-bold">
-            {noPercentage}/{yesPercentage}
+          <span className="text-slate-300 text-sm font-semibold">Odds</span>
+          <span className="text-white text-xl font-bold">
+            {noPercentage}% / {yesPercentage}%
           </span>
         </div>
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+        <div className="h-2.5 bg-slate-800 rounded-full overflow-hidden">
           <div 
             className={cn('h-full bg-gradient-to-r transition-all duration-500', status.barColor)}
             style={{ width: `${yesPercentage}%` }}
           />
         </div>
-        <div className="flex justify-between text-xs text-slate-500">
-          <span>NO</span>
-          <span>YES</span>
+        <div className="flex justify-between text-xs font-semibold">
+          <span className="text-slate-400">NO</span>
+          <span className="text-emerald-400">YES</span>
         </div>
       </div>
 
       {/* Bottom Row */}
       <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
-        <div className="flex items-center gap-2 text-sm text-slate-300">
-          <Clock className="w-3.5 h-3.5 text-slate-400" />
-          <span>
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          <Clock className="w-3.5 h-3.5 text-emerald-400/70" />
+          <span className="font-medium">
             {isLive 
               ? getTimeLeft(market.marketEnd)
               : getBettingTimeLeft(market.marketStart)
             }
           </span>
         </div>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-slate-500 font-medium">
           {formatDate(market.marketStart)}
         </span>
       </div>
 
       {/* Market ID indicator (bottom-right corner) */}
-      <div className="absolute right-3 bottom-3 text-[10px] text-slate-500/50">
-        {market.marketId ?? 'none'}
+      <div className="absolute right-3 bottom-3 text-[10px] text-emerald-500/30 font-mono">
+        #{market.marketId ?? 'none'}
       </div>
     </div>
     </Link>

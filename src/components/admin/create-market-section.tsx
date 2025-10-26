@@ -234,10 +234,10 @@ export function CreateMarketSection() {
             <textarea
               value={formData.question}
               onChange={(e) => handleInputChange('question', e.target.value)}
-              placeholder="E.g., Will ETH reach $5000 by end of 2025?"
+              placeholder="E.g., Will Manchester United beat Chelsea in Premier League?"
               rows={3}
               maxLength={200}
-              className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none"
+              className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none"
             />
             <p className="text-xs text-slate-500 mt-1">{formData.question.length}/200 characters</p>
           </div>

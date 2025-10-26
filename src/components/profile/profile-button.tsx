@@ -19,14 +19,10 @@ export function ProfileButton({ onClick, className }: ProfileButtonProps) {
         'transition-all duration-300 hover:scale-105',
         className
       )}
-    >
-      {/* Glow effect */}
-      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
-      
+    >      
       <User className="relative w-5 h-5 text-purple-400 group-hover:text-purple-300 transition-colors" />
       
-      {/* Active indicator dot */}
-      <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse" />
+      
     </button>
   )
 }

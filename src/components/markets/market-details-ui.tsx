@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Clock, DollarSign, Info, ArrowLeft, Sparkles, Activity, CheckCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, Clock, DollarSign, Info, ArrowLeft, Sparkles, Activity, CheckCircle, Trophy } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useShortx } from '@/components/solana/useDepredict'
 import { Market, WinningDirection } from '@endcorp/depredict'
@@ -24,6 +24,31 @@ export default function MarketDetailsPage() {
   const [loadingBets, setLoadingBets] = useState(true)
   const [market, setMarket] = useState<Market | null>(null)
   const [loadingMarket, setLoadingMarket] = useState(true)
+
+  // Format bet amount input to max 2 decimal places
+  const handleBetAmountChange = (value: string) => {
+    // Allow empty string
+    if (value === '') {
+      setBetAmount('')
+      return
+    }
+
+    // Remove any non-numeric characters except decimal point
+    const cleaned = value.replace(/[^\d.]/g, '')
+    
+    // Ensure only one decimal point
+    const parts = cleaned.split('.')
+    if (parts.length > 2) {
+      return
+    }
+    
+    // Limit to 2 decimal places
+    if (parts.length === 2 && parts[1].length > 2) {
+      return
+    }
+    
+    setBetAmount(cleaned)
+  }
 
   // Fetch market data
   useEffect(() => {
@@ -111,7 +136,7 @@ export default function MarketDetailsPage() {
 
   const stats = getMarketStats()
 
-  // Format timestamps
+  // Update formatDate to include time
   const formatDate = (timestamp: string | number) => {
     const ts = Number(timestamp)
     if (!ts || ts === 0) return 'TBD'
@@ -119,6 +144,8 @@ export default function MarketDetailsPage() {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     })
   }
 
@@ -129,9 +156,9 @@ export default function MarketDetailsPage() {
 
     if (state?.includes('active') || state?.includes('trading')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium">
-          <Activity className="w-4 h-4" />
-          Active
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium">
+          <Trophy className="w-4 h-4" />
+          Open for Betting
         </span>
       )
     }
@@ -139,7 +166,8 @@ export default function MarketDetailsPage() {
     if (state?.includes('resolved')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium">
-          Resolved
+          <CheckCircle className="w-4 h-4" />
+          Settled
         </span>
       )
     }
@@ -301,9 +329,9 @@ export default function MarketDetailsPage() {
 
   if (loadingMarket) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/20 text-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-400">Loading market...</p>
         </div>
       </div>
@@ -312,10 +340,13 @@ export default function MarketDetailsPage() {
 
   if (!market) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/20 text-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-400 text-lg mb-2">Market not found</p>
-          <button onClick={() => router.back()} className="text-slate-400 hover:text-white transition-colors">
+          <button 
+            onClick={() => router.back()} 
+            className="text-slate-400 hover:text-emerald-400 transition-colors font-semibold"
+          >
             ← Go back
           </button>
         </div>
@@ -338,16 +369,16 @@ export default function MarketDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/20 text-white">
       {/* Header */}
-      <header className="border-b border-slate-800/50 backdrop-blur-sm sticky top-0 z-10 bg-slate-950/80">
+      <header className="border-b border-emerald-900/20 backdrop-blur-sm sticky top-0 z-10 bg-slate-950/90">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-emerald-400 transition-colors group"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Markets</span>
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-semibold">Back to Markets</span>
           </button>
         </div>
       </header>
@@ -359,13 +390,12 @@ export default function MarketDetailsPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
                 {getStatusBadge()}
-                <span className="px-3 py-1 rounded-full bg-slate-700/50 text-slate-300 text-xs font-medium">
-                  Market #{market.marketId}
-                </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-3">{getQuestion()}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-gradient-to-r from-white to-emerald-100 bg-clip-text text-transparent">
+                {getQuestion()}
+              </h1>
               <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-                This is a parimutuel prediction market. All bets are pooled together, and winnings are distributed
+                Place your bet and win big! All bets are pooled together, and winnings are distributed
                 proportionally among winners.
               </p>
             </div>
@@ -373,39 +403,39 @@ export default function MarketDetailsPage() {
 
           {/* Market Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+            <div className="p-4 rounded-xl bg-slate-900/70 border border-emerald-900/20 hover:border-emerald-500/30 transition-colors">
+              <div className="flex items-center gap-2 text-emerald-400/70 text-sm mb-1">
                 <DollarSign className="w-4 h-4" />
-                Volume
+                Total Volume
               </div>
-              <div className="text-xl font-bold">
+              <div className="text-2xl font-bold text-white">
                 ${stats.volume.toLocaleString(undefined, { maximumFractionDigits: 2 })}
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+            <div className="p-4 rounded-xl bg-slate-900/70 border border-emerald-900/20 hover:border-emerald-500/30 transition-colors">
+              <div className="flex items-center gap-2 text-emerald-400/70 text-sm mb-1">
                 <Activity className="w-4 h-4" />
                 Total Bets
               </div>
-              <div className="text-xl font-bold">
-                {loadingBets ? <span className="text-slate-500">Loading...</span> : totalBets}
+              <div className="text-2xl font-bold text-white">
+                {loadingBets ? <span className="text-slate-500 text-lg">Loading...</span> : totalBets}
               </div>
             </div>
-            <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+            <div className="p-4 rounded-xl bg-slate-900/70 border border-emerald-900/20 hover:border-emerald-500/30 transition-colors">
+              <div className="flex items-center gap-2 text-emerald-400/70 text-sm mb-1">
                 <Clock className="w-4 h-4" />
-                {isResolved() ? 'Resolved on' : 'Ends'}
+                {isResolved() ? 'Settled on' : 'Betting closes'}
               </div>
-              <div className="text-xl font-bold">
-                {isResolved() ? formatDate(market.marketEnd) : formatDate(market.marketEnd)}
+              <div className="text-xl font-bold text-white">
+                {isResolved() ? formatDate(market.marketEnd) : formatDate(market.marketStart)}
               </div>
               {isResolved() && getWinningDirection() && (
                 <div
                   className={`text-sm mt-1 font-semibold ${
                     getWinningDirection() === 'YES'
-                      ? 'text-purple-400'
+                      ? 'text-emerald-400'
                       : getWinningDirection() === 'NO'
-                        ? 'text-slate-300'
+                        ? 'text-red-400'
                         : 'text-yellow-400'
                   }`}
                 >
@@ -424,12 +454,12 @@ export default function MarketDetailsPage() {
               <h2 className="text-xl font-bold mb-6">Current Odds</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-6 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                <div className="p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-purple-400">YES</span>
-                    <TrendingUp className="w-5 h-5 text-purple-400" />
+                    <span className="text-sm font-medium text-emerald-400">YES</span>
+                    <TrendingUp className="w-5 h-5 text-emerald-400" />
                   </div>
-                  <div className="text-4xl font-bold text-purple-400 mb-1">{(stats.yesProb * 100).toFixed(1)}%</div>
+                  <div className="text-4xl font-bold text-emerald-400 mb-1">{(stats.yesProb * 100).toFixed(1)}%</div>
                   <div className="text-sm text-slate-400">
                     $
                     {stats.totalLiquidity > 0
@@ -439,12 +469,12 @@ export default function MarketDetailsPage() {
                   </div>
                 </div>
 
-                <div className="p-6 rounded-xl bg-slate-700/30 border border-slate-600/50">
+                <div className="p-6 rounded-xl bg-red-500/10 border border-red-500/20">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-slate-300">NO</span>
-                    <TrendingDown className="w-5 h-5 text-slate-400" />
+                    <span className="text-sm font-medium text-red-400">NO</span>
+                    <TrendingDown className="w-5 h-5 text-red-400" />
                   </div>
-                  <div className="text-4xl font-bold text-slate-300 mb-1">{(stats.noProb * 100).toFixed(1)}%</div>
+                  <div className="text-4xl font-bold text-red-400 mb-1">{(stats.noProb * 100).toFixed(1)}%</div>
                   <div className="text-sm text-slate-400">
                     $
                     {stats.totalLiquidity > 0
@@ -471,15 +501,15 @@ export default function MarketDetailsPage() {
               <h2 className="text-xl font-bold mb-4">Market Information</h2>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b border-slate-700/50">
-                  <span className="text-slate-400">Market ID</span>
-                  <span className="font-medium">#{market.marketId}</span>
+                  <span className="text-slate-400">Betting Opens</span>
+                  <span className="font-medium">{formatDate(market.bettingStartTime || market.marketStart)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-700/50">
-                  <span className="text-slate-400">Trading Starts</span>
+                  <span className="text-slate-400">Betting Closes</span>
                   <span className="font-medium">{formatDate(market.marketStart)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-slate-700/50">
-                  <span className="text-slate-400">Trading Ends</span>
+                  <span className="text-slate-400">Market Ends</span>
                   <span className="font-medium">{formatDate(market.marketEnd)}</span>
                 </div>
                 <div className="flex justify-between py-2">
@@ -498,7 +528,7 @@ export default function MarketDetailsPage() {
             <div className="sticky top-24">
               <div className="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 backdrop-blur-sm">
                 <div className="flex items-center gap-2 mb-6">
-                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <Sparkles className="w-5 h-5 text-emerald-400" />
                   <h2 className="text-xl font-bold">Place Your Bet</h2>
                 </div>
 
@@ -510,7 +540,7 @@ export default function MarketDetailsPage() {
                       onClick={() => setSelectedOutcome('yes')}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         selectedOutcome === 'yes'
-                          ? 'bg-purple-500/20 border-purple-500 text-purple-400'
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
                           : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600'
                       }`}
                     >
@@ -521,7 +551,7 @@ export default function MarketDetailsPage() {
                       onClick={() => setSelectedOutcome('no')}
                       className={`p-4 rounded-xl border-2 transition-all ${
                         selectedOutcome === 'no'
-                          ? 'bg-slate-700/50 border-slate-500 text-slate-200'
+                          ? 'bg-red-500/20 border-red-500 text-red-400'
                           : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600'
                       }`}
                     >
@@ -537,13 +567,12 @@ export default function MarketDetailsPage() {
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={betAmount}
-                      onChange={(e) => setBetAmount(e.target.value)}
+                      onChange={(e) => handleBetAmountChange(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-10 pr-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20 transition-all"
-                      min="0"
-                      step="0.01"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all"
                     />
                   </div>
                   <div className="flex gap-2 mt-2">
@@ -561,10 +590,10 @@ export default function MarketDetailsPage() {
 
                 {/* Calculation Summary */}
                 {betAmount && !isNaN(parseFloat(betAmount)) && (
-                  <div className="mb-6 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-2">
+                  <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Potential payout</span>
-                      <span className="font-semibold text-purple-400">${calculatePayout().toFixed(2)}</span>
+                      <span className="font-semibold text-emerald-400">${calculatePayout().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Potential profit</span>
@@ -594,7 +623,7 @@ export default function MarketDetailsPage() {
                       ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
                       : !betAmount || isNaN(parseFloat(betAmount)) || parseFloat(betAmount) <= 0 || isPlacingBet
                       ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
+                      : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40'
                   }`}
                 >
                   {!wallet.publicKey ? (
@@ -632,16 +661,16 @@ export default function MarketDetailsPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/20 mb-4">
             <CheckCircle className="w-8 h-8 text-green-400" />
           </div>
-          <h3 className="text-xl font-bold mb-2">Market Resolved</h3>
+          <h3 className="text-xl font-bold mb-2">Market Settled</h3>
           <p className="text-slate-400 mb-4">
-            This market has been settled.
+            This market has been resolved and payouts are available.
           </p>
           {getWinningDirection() && (
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
               getWinningDirection() === 'YES' 
-                ? 'bg-purple-500/20 border border-purple-500/30 text-purple-400' 
+                ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400' 
                 : getWinningDirection() === 'NO'
-                ? 'bg-slate-700/50 border border-slate-600 text-slate-200'
+                ? 'bg-red-500/20 border border-red-500/30 text-red-400'
                 : 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-400'
             }`}>
               {getWinningDirection() === 'YES' && <TrendingUp className="w-5 h-5" />}

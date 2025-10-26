@@ -1,53 +1,65 @@
 'use client'
 
 import React from 'react'
-import { TrendingUp, Flame } from 'lucide-react'
+import { TrendingUp, Flame, Trophy, Timer } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function FeaturedMarketsBanner() {
-  // Demo featured markets
+  // Sports betting featured markets
   const featuredMarkets = [
     {
       id: 1,
-      question: "Will Bitcoin reach $100k by end of 2025?",
-      volume: "$12,450",
-      probability: 67,
+      question: "Will Manchester United beat Liverpool?",
+      sport: "⚽ Premier League",
+      matchTime: "Tomorrow 3:00 PM",
+      volume: "$45,230",
+      probability: 58,
       trend: "up",
-      badge: "🔥 Hot"
+      badge: "🔥 Hot",
+      color: "emerald"
     },
     {
       id: 2,
-      question: "Will Ethereum flip Bitcoin this year?",
-      volume: "$8,320",
-      probability: 23,
-      trend: "down",
-      badge: "⏱️ Ending Soon"
+      question: "Will India score 300+ runs vs Australia?",
+      sport: "🏏 Test Cricket",
+      matchTime: "Today 10:00 AM",
+      volume: "$32,840",
+      probability: 67,
+      trend: "up",
+      badge: "⚡ Live",
+      color: "orange"
     },
     {
       id: 3,
-      question: "Will Solana reach $500 by Q2 2026?",
-      volume: "$15,890",
-      probability: 45,
-      trend: "up",
-      badge: "📈 Trending"
+      question: "Will Real Madrid win Champions League?",
+      sport: "⚽ UCL Final",
+      matchTime: "June 1, 2025",
+      volume: "$78,950",
+      probability: 42,
+      trend: "down",
+      badge: "🏆 Finals",
+      color: "blue"
     }
   ]
 
   return (
-    <div className="mb-8 relative overflow-hidden rounded-2xl bg-gradient-to-r from-purple-900/20 via-pink-900/20 to-purple-900/20 border border-purple-500/20 p-6">
+    <div className="mb-8 relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/40 via-green-950/40 to-teal-950/40 border border-emerald-500/20 p-6">
       {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-pink-500/5 to-purple-500/5 animate-pulse" />
+      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-green-500/5 to-teal-500/5 animate-pulse" />
       
       <div className="relative">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-              <Flame className="w-5 h-5 text-purple-400" />
+            <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-500/30">
+              <Flame className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Featured Markets</h3>
-              <p className="text-sm text-slate-400">High volume & trending predictions</p>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                Featured Matches
+                <Trophy className="w-4 h-4 text-yellow-500" />
+              </h3>
+              <p className="text-sm text-emerald-400/70">High stakes & trending bets</p>
             </div>
           </div>
           
@@ -58,40 +70,59 @@ export function FeaturedMarketsBanner() {
           {featuredMarkets.map((market) => (
             <div
               key={market.id}
-              className="group relative p-4 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 cursor-pointer hover:scale-[1.02]"
+              className="group relative p-5 rounded-xl bg-slate-900/70 border border-slate-700/50 hover:border-emerald-500/50 transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/10"
             >
               {/* Badge */}
-              <div className="absolute -top-2 -right-2 px-2 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-xs font-semibold text-purple-300">
+              <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-500/30 text-xs font-bold text-emerald-300 shadow-lg">
                 {market.badge}
               </div>
 
               <div className="space-y-3">
+                {/* Sport & Time */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-emerald-400">{market.sport}</span>
+                  <span className="text-slate-400 flex items-center gap-1">
+                    <Timer className="w-3 h-3" />
+                    {market.matchTime}
+                  </span>
+                </div>
+
                 {/* Question */}
-                <p className="text-sm font-semibold text-white line-clamp-2 group-hover:text-purple-400 transition-colors">
+                <p className="text-sm font-bold text-white line-clamp-2 group-hover:text-emerald-400 transition-colors min-h-[40px]">
                   {market.question}
                 </p>
 
                 {/* Stats Row */}
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1 text-slate-400">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span className="font-medium">{market.volume}</span>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="font-bold text-white">{market.volume}</span>
                   </div>
                   <div className={cn(
-                    "flex items-center gap-1 font-bold",
-                    market.trend === 'up' ? "text-emerald-400" : "text-red-400"
+                    "flex items-center gap-1.5 font-bold text-sm",
+                    market.trend === 'up' ? "text-emerald-400" : "text-orange-400"
                   )}>
-                    <span>{market.probability}% YES</span>
-                    <span className="text-xs">{market.trend === 'up' ? '↑' : '↓'}</span>
+                    <span>{market.probability}%</span>
+                    <span className="text-base">{market.trend === 'up' ? '↑' : '↓'}</span>
                   </div>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-green-500 transition-all duration-500 shadow-lg shadow-emerald-500/50"
                     style={{ width: `${market.probability}%` }}
                   />
+                </div>
+
+                {/* Quick Bet Buttons */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 text-xs font-semibold transition-all">
+                    Bet YES
+                  </button>
+                  <button className="px-3 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 text-slate-400 hover:text-white text-xs font-semibold transition-all">
+                    Bet NO
+                  </button>
                 </div>
               </div>
             </div>

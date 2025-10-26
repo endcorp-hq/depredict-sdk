@@ -58,52 +58,56 @@ export function ProfileSidebar({
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed top-0 right-0 h-full w-full sm:w-[480px] bg-slate-900 border-l border-slate-700/50 z-50',
+          'fixed top-0 right-0 h-full w-full sm:w-[480px] bg-slate-900 border-l border-emerald-900/30 z-50',
           'transform transition-transform duration-300 ease-out',
-          'flex flex-col overflow-hidden',
+          'flex flex-col overflow-hidden shadow-2xl shadow-emerald-500/10',
           isOpen ? 'translate-x-0' : 'translate-x-full',
         )}
       >
         {/* Header */}
-        <div className="relative p-6 border-b border-slate-700/50 bg-gradient-to-r from-purple-900/20 to-pink-900/20">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5" />
+        <div className="relative p-6 border-b border-emerald-900/30 bg-gradient-to-r from-emerald-950/40 via-green-950/40 to-teal-950/40">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-green-500/5" />
           <div className="relative flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white">Profile</h2>
-              <p className="text-sm text-slate-400 mt-1">Manage your account</p>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+                Your Profile
+              </h2>
+              <p className="text-sm text-emerald-400/70 mt-1">Manage bets & positions</p>
             </div>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-800/50 transition-colors group">
-              <X className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" />
+            <button 
+              onClick={onClose} 
+              className="p-2 rounded-lg hover:bg-slate-800/50 transition-colors group"
+            >
+              <X className="w-5 h-5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
             </button>
           </div>
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-slate-900 to-slate-950">
           {/* Wallet Address */}
-          <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-            <p className="text-xs text-slate-400 mb-2 uppercase tracking-wider font-semibold">Connected Wallet</p>
+          <div className="p-4 rounded-xl bg-slate-800/50 border border-emerald-900/20 hover:border-emerald-500/30 transition-colors">
+            <p className="text-xs text-emerald-400/70 mb-2 uppercase tracking-wider font-semibold">Connected Wallet</p>
             <button
               onClick={handleCopyAddress}
               className="group w-full text-left"
               disabled={!walletAddress || walletAddress === 'Not Connected'}
             >
-              <span className="text-white font-mono text-base group-hover:text-purple-400 transition-colors group-hover:underline decoration-purple-400 decoration-2 underline-offset-4 cursor-pointer">
+              <span className="text-white font-mono text-base group-hover:text-emerald-400 transition-colors group-hover:underline decoration-emerald-400 decoration-2 underline-offset-4 cursor-pointer">
                 {ellipsifyAddress(walletAddress)}
               </span>
             </button>
           </div>
 
-
           {/* Positions */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Active Positions</h3>
+            <h3 className="text-sm font-semibold text-emerald-400 mb-3 uppercase tracking-wider">Active Positions</h3>
             <PositionsList />
           </div>
         </div>
 
         {/* Footer - Logout Button */}
-        <div className="p-4 border-t border-slate-700/50 bg-slate-900/50">
+        <div className="p-4 border-t border-emerald-900/30 bg-slate-950/80">
           <button
             onClick={handleDisconnect}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/40 transition-all duration-300 font-semibold group"
