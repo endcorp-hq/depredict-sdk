@@ -42,11 +42,11 @@ App runs on `http://localhost:3000`.
 
 Set these in your local `.env.local` and in your Vercel project settings.
 
-- **NEXT_PUBLIC_RPC_ENDPOINT**: RPC (or DAS-compatible) endpoint used by on-chain reads
-- **NEXT_PUBLIC_SOLANA_RPC_URL**: General Solana RPC URL for providers; you can use the same value as `NEXT_PUBLIC_RPC_ENDPOINT`
-- **NEXT_PUBLIC_CREATOR_PUBLIC_ADMIN_KEY**: Market creator PDA/public key for this app instance
-- **NEXT_PUBLIC_SHORTX_COLLECTION_ADDRESS**: Collection address created for your markets
-- **NEXT_PUBLIC_CORE_COLLECTION_ID**: Core collection id (used by burn operations)
+- `NEXT_PUBLIC_RPC_ENDPOINT`: RPC (or DAS-compatible) endpoint used by on-chain reads
+- `NEXT_PUBLIC_SOLANA_RPC_URL`: General Solana RPC URL for providers; you can use the same value as `NEXT_PUBLIC_RPC_ENDPOINT`
+- `NEXT_PUBLIC_CREATOR_PUBLIC_ADMIN_KEY`: Market creator PDA/public key for this app instance
+- `NEXT_PUBLIC_SHORTX_COLLECTION_ADDRESS`: Collection address created for your markets
+- `NEXT_PUBLIC_CORE_COLLECTION_ID`: Core collection id (used by burn operations)
 
 Tip: For development you can start with Devnet RPCs such as `https://api.devnet.solana.com`.
 
@@ -57,7 +57,7 @@ Once your site is live (or running locally):
 1. Navigate to `/admin`
 2. Connect your wallet
 3. Run the Market Creator setup flow
-   - This will create a **Collection NFT** and a **Merkle Tree** for storing cNFTs
+   - This will create a `Collection NFT` and a `Merkle Tree` for storing cNFTs
 4. The UI will surface the generated values you need to set as env vars:
    - `NEXT_PUBLIC_CREATOR_PUBLIC_ADMIN_KEY`
    - `NEXT_PUBLIC_SHORTX_COLLECTION_ADDRESS`
@@ -75,9 +75,9 @@ After this, your app is ready to create and resolve markets with DePredict.
 
 ## How it works (high-level)
 
-- The Admin flow provisions a **Market Creator** account and on-chain storage:
-  - A **Collection NFT** that represents your marketplace
-  - A **Merkle Tree** that stores **cNFTs** representing user positions
+- The Admin flow provisions a `Market Creator` account and on-chain storage:
+  - A `Collection NFT` that represents your marketplace
+  - A `Merkle Tree` that stores `cNFTs` representing user positions
 - The app and hooks use your configured RPC to query and mutate on-chain state
 
 ## Support
