@@ -30,11 +30,30 @@ export function useMarketCreator(client: DepredictClient | null, isInitialized: 
       setStatus(prev => ({ ...prev, isChecking: true }))
 
       try {
-        // Step 1: Check if env variable exists
-        const adminKey = process.env.NEXT_PUBLIC_CREATOR_PUBLIC_ADMIN_KEY
+        const envAdminKey = process.env.NEXT_PUBLIC_CREATOR_PUBLIC_ADMIN_KEY
+        let storedDetails: {
+          marketCreator?: string
+          adminKey?: string
+          verified?: boolean
+        } | null = null
 
-        if (!adminKey) {
-          console.log('No NEXT_PUBLIC_CREATOR_PUBLIC_ADMIN_KEY found in environment')
+        if (typeof window !== 'undefined') {
+          try {
+            const raw = localStorage.getItem('marketCreatorDetails')
+            if (raw) {
+              storedDetails = JSON.parse(raw)
+            }
+          } catch (storageError) {
+            console.warn('Failed to read marketCreatorDetails from localStorage', storageError)
+          }
+        }
+
+        const storedMarketCreator = storedDetails?.marketCreator ?? null
+        const storedAdminKey = storedDetails?.adminKey ?? null
+        const hasKeySource = Boolean(envAdminKey || storedMarketCreator || storedAdminKey)
+
+        if (!hasKeySource) {
+          console.log('No market creator configuration found in environment or local storage')
           setStatus({
             exists: false,
             pda: null,
@@ -46,37 +65,62 @@ export function useMarketCreator(client: DepredictClient | null, isInitialized: 
           return
         }
 
-        // Step 2: If env exists, check if market creator exists on-chain
         if (!client || !isInitialized) {
           return // Wait for SDK to initialize
         }
 
+        let targetPda: PublicKey | null = null
+
+        if (envAdminKey) {
+          const adminPubkey = new PublicKey(envAdminKey)
+          ;[targetPda] = PublicKey.findProgramAddressSync(
+            [Buffer.from('market_creator'), adminPubkey.toBytes()],
+            client.program.programId,
+          )
+        }
+
         try {
-          const adminPubkey = new PublicKey(adminKey)
+          if (!targetPda && storedMarketCreator) {
+            targetPda = new PublicKey(storedMarketCreator)
+          }
 
-          // Fetch ALL market creators from the program
-          const marketCreators = await client.program.account.marketCreator.all()
-          const accounts = marketCreators.map(({ account, publicKey }) => ({
-            account,
-            publicKey: publicKey.toBase58(),
-          }))
+          if (!targetPda && storedAdminKey) {
+            const adminPubkey = new PublicKey(storedAdminKey)
+            ;[targetPda] = PublicKey.findProgramAddressSync(
+              [Buffer.from('market_creator'), adminPubkey.toBytes()],
+              client.program.programId,
+            )
+          }
 
-          console.log('All market creators found:', accounts)
+          if (!targetPda) {
+            throw new Error('Unable to determine market creator PDA')
+          }
 
-          // Find the market creator matching our expected PDA
-          const ourMarketCreator = accounts.find(({ publicKey }) => publicKey === adminPubkey.toBase58())
+          const marketCreatorAccount = client.program.account.marketCreator as {
+            fetchNullable?: (pubkey: PublicKey) => Promise<unknown | null>
+            fetch: (pubkey: PublicKey) => Promise<unknown>
+          }
+          const account = marketCreatorAccount.fetchNullable
+            ? await marketCreatorAccount.fetchNullable(targetPda)
+            : await (async () => {
+                try {
+                  return await marketCreatorAccount.fetch(targetPda)
+                } catch {
+                  return null
+                }
+              })()
 
-          if (ourMarketCreator) {
-            const verified = (ourMarketCreator.account as any).verified || false
-            console.log('Market creator found on-chain:', ourMarketCreator.publicKey)
+          if (account) {
+            const verified = Boolean((account as any).verified)
+            console.log('Market creator found on-chain:', targetPda.toBase58())
             console.log('Verified:', verified)
-            
+
             setStatus({
               exists: true,
-              pda: ourMarketCreator.publicKey,
+              pda: targetPda.toBase58(),
               isChecking: false,
               error: null,
-              hasEnvKey: true,
+              hasEnvKey: hasKeySource,
               isVerified: verified,
             })
           } else {
@@ -86,7 +130,7 @@ export function useMarketCreator(client: DepredictClient | null, isInitialized: 
               pda: null,
               isChecking: false,
               error: null,
-              hasEnvKey: true,
+              hasEnvKey: hasKeySource,
               isVerified: false,
             })
           }
@@ -97,7 +141,7 @@ export function useMarketCreator(client: DepredictClient | null, isInitialized: 
             pda: null,
             isChecking: false,
             error: error instanceof Error ? error.message : 'Unknown error',
-            hasEnvKey: true,
+            hasEnvKey: hasKeySource,
             isVerified: false,
           })
         }
