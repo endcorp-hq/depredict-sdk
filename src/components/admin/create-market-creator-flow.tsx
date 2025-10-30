@@ -50,123 +50,54 @@ export function CreateMarketCreatorFlow({ onCreated }: CreateMarketCreatorFlowPr
     }
 
     setIsProcessing(true)
+    setStep('creating')
 
     try {
-      let targetMarketCreatorPda: PublicKey | null = null
-      let existingMarketCreator: {
-        pda: PublicKey
-        verified: boolean
-      } | null = null
+      // Step 1: Create Market Creator using connected wallet
+      toast.loading('Step 1: Creating market creator...', { id: 'mc-flow' })
 
-      try {
-        const [expectedPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from('market_creator'), wallet.publicKey.toBytes()],
-          client.program.programId,
-        )
-        const marketCreatorAccount = client.program.account.marketCreator as {
-          fetchNullable?: (pubkey: PublicKey) => Promise<unknown | null>
-          fetch: (pubkey: PublicKey) => Promise<unknown>
-        }
-        const fetchedAccount = marketCreatorAccount.fetchNullable
-          ? await marketCreatorAccount.fetchNullable(expectedPda)
-          : await (async () => {
-              try {
-                return await marketCreatorAccount.fetch(expectedPda)
-              } catch {
-                return null
-              }
-            })()
-
-        if (fetchedAccount) {
-          existingMarketCreator = {
-            pda: expectedPda,
-            verified: Boolean((fetchedAccount as any).verified),
-          }
-        }
-      } catch (checkError) {
-        console.warn('Unable to check for existing market creator, proceeding with creation', checkError)
+      // Call the SDK method to create market creator with connected wallet
+      const createResult = await client.marketCreator.createMarketCreator({
+        name: 'Market Creator',
+        feeVault: wallet.publicKey, // Use connected wallet as fee vault (can be changed later)
+        creatorFeeBps: 100,
+        signer: wallet.publicKey,
+      })
+      
+      if (!createResult) {
+        throw new Error('Failed to create market creator')
       }
 
-      if (existingMarketCreator) {
-        const pdaString = existingMarketCreator.pda.toBase58()
-        setMarketCreatorPda(pdaString)
-        targetMarketCreatorPda = existingMarketCreator.pda
+      const { ixs, marketCreator } = createResult
+      const pdaString = marketCreator.toBase58()
+      setMarketCreatorPda(pdaString)
 
-        if (existingMarketCreator.verified) {
-          toast.success('Market creator already exists and is verified.')
-          setStep('complete')
-          localStorage.setItem(
-            'marketCreatorDetails',
-            JSON.stringify({
-              marketCreator: pdaString,
-              adminKey: wallet.publicKey.toBase58(),
-              coreCollection: coreCollection || null,
-              merkleTree: merkleTree || null,
-              verified: true,
-              createdAt: new Date().toISOString(),
-            }),
-          )
-          return
-        }
+      // Build and sign transaction for market creator creation
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
+      const transaction = new Transaction()
+      transaction.add(...ixs)
+      transaction.recentBlockhash = blockhash
+      transaction.feePayer = wallet.publicKey
 
-        toast.info('Market creator already exists. Continuing with verification...')
-        setStep('verifying')
-      } else {
-        setStep('creating')
+      const signedTx = await wallet.signTransaction(transaction)
+      const signature = await connection.sendRawTransaction(signedTx.serialize())
+      
+      await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      })
 
-        // Step 1: Create Market Creator using connected wallet
-        toast.loading('Step 1: Creating market creator...', { id: 'mc-flow' })
+      console.log('✅ Market creator created:', pdaString)
+      
+      // Wait a bit for account to settle
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
-        // Call the SDK method to create market creator with connected wallet
-        const createResult = await client.marketCreator.createMarketCreator({
-          name: 'Market Creator',
-          feeVault: wallet.publicKey, // Use connected wallet as fee vault (can be changed later)
-          creatorFeeBps: 100,
-          signer: wallet.publicKey,
-        })
-        
-        if (!createResult) {
-          throw new Error('Failed to create market creator')
-        }
-
-        const { ixs, marketCreator } = createResult
-        const pdaString = marketCreator.toBase58()
-        setMarketCreatorPda(pdaString)
-        targetMarketCreatorPda = marketCreator
-
-        // Build and sign transaction for market creator creation
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash()
-        const transaction = new Transaction()
-        transaction.add(...ixs)
-        transaction.recentBlockhash = blockhash
-        transaction.feePayer = wallet.publicKey
-
-        const signedTx = await wallet.signTransaction(transaction)
-        const signature = await connection.sendRawTransaction(signedTx.serialize())
-        
-        await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight,
-        })
-
-        console.log('✅ Market creator created:', pdaString)
-        
-        // Wait a bit for account to settle
-        await new Promise(resolve => setTimeout(resolve, 2000))
-
-        // Step 2: Verify (Create Collection + Tree + Verify)
-        setStep('verifying')
-      }
-
+      // Step 2: Verify (Create Collection + Tree + Verify)
+      setStep('verifying')
       toast.loading('Step 2: Creating core collection...', { id: 'mc-flow' })
 
-      const targetPdaString = targetMarketCreatorPda?.toBase58() ?? marketCreatorPda
-      if (!targetPdaString) {
-        throw new Error('Missing market creator PDA for verification steps')
-      }
-
-      const collectionResult = await createCollection(wallet.publicKey.toBase58(), targetPdaString)
+      const collectionResult = await createCollection(wallet.publicKey.toBase58(), pdaString)
       
       if (!collectionResult) {
         throw new Error('Failed to create collection')
@@ -224,7 +155,7 @@ export function CreateMarketCreatorFlow({ onCreated }: CreateMarketCreatorFlowPr
 
       // Save to localStorage
       const marketCreatorDetails = {
-        marketCreator: targetPdaString,
+        marketCreator: pdaString,
         adminKey: wallet.publicKey.toBase58(),
         coreCollection: collectionResult.publicKey,
         merkleTree: treeResult.publicKey,
